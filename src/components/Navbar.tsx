@@ -469,6 +469,24 @@ const Navbar: React.FC = () => {
         )}
       </nav>
 
+      {/* Floating Action Button for Mobile */}
+      <button
+        onClick={() => {
+          if (user) {
+            setCreatePostModal({ isOpen: true, type: 'sighting' });
+          } else {
+            setAuthModal({ isOpen: true, mode: 'signin' });
+          }
+        }}
+        className="lg:hidden fixed bottom-20 right-4 w-14 h-14 bg-gradient-to-br from-[#f59e0b] to-[#d97706] rounded-full shadow-lg flex items-center justify-center z-40 hover:scale-105 transition-transform"
+        style={{ boxShadow: '0 4px 20px rgba(245, 158, 11, 0.4)' }}
+        title="Post Sighting"
+      >
+        <svg className="w-7 h-7 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
+
       {/* Modals */}
       <AuthModal
         isOpen={authModal.isOpen}
