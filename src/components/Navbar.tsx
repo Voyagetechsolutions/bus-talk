@@ -167,6 +167,7 @@ const Navbar: React.FC = () => {
                 <Dropdown isOpen={communityOpen}>
                   <DropdownItem to="/posts" icon="📰">News & Posts</DropdownItem>
                   <DropdownItem to="/sightings" icon="📸">Bus Sightings</DropdownItem>
+                  <DropdownItem to="/coach-talk" icon="🗣️">Coach Talk</DropdownItem>
                 </Dropdown>
               </div>
 
@@ -371,6 +372,10 @@ const Navbar: React.FC = () => {
                 <Link to="/sightings" onClick={closeAllDropdowns} className="flex items-center space-x-3 py-3 px-3 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors">
                   <span>📸</span>
                   <span>Bus Sightings</span>
+                </Link>
+                <Link to="/coach-talk" onClick={closeAllDropdowns} className="flex items-center space-x-3 py-3 px-3 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                  <span>🗣️</span>
+                  <span>Coach Talk</span>
                 </Link>
                 <Link to="/vote" onClick={closeAllDropdowns} className="flex items-center space-x-3 py-3 px-3 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors">
                   <span>🗳️</span>

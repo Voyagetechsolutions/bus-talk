@@ -192,9 +192,12 @@ const FeedPost: React.FC<FeedPostProps> = ({ post, currentUserId, onCommentClick
                                 <span>{post.comments_count}</span>
                             </button>
                         </div>
-                        <button className="post-read-more" onClick={() => onCommentClick(post._id)}>
-                            Read more →
-                        </button>
+                        {/* Read more only for news posts */}
+                        {post.type === 'news' && (
+                            <button className="post-read-more" onClick={() => onCommentClick(post._id)}>
+                                Read more →
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

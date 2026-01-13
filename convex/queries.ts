@@ -266,3 +266,63 @@ export const getFollowingCount = query({
     return following.length;
   },
 });
+
+// ============== COMMUNITY QUERIES (Coach Talk) ==============
+
+// Get all communities
+export const getCommunities = query({
+  args: {},
+  handler: async (ctx) => {
+    const communities = await ctx.db
+      .query("communities")
+      .order("desc")
+      .collect();
+    return communities;
+  },
+});
+
+// Get community by slug
+export const getCommunity = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const community = await ctx.db
+      .query("communities")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .first();
+    return community;
+  },
+});
+
+// Get posts for a community
+export const getCommunityPosts = query({
+  args: {
+    community_id: v.id("communities"),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 20;
+    const posts = await ctx.db
+      .query("community_posts")
+      .withIndex("by_community", (q) => q.eq("community_id", args.community_id))
+      .order("desc")
+      .take(limit);
+    return posts;
+  },
+});
+
+// Check if user is member of community
+export const isCommunityMember = query({
+  args: {
+    community_id: v.id("communities"),
+    user_id: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const membership = await ctx.db
+      .query("community_members")
+      .withIndex("by_pair", (q) =>
+        q.eq("community_id", args.community_id).eq("user_id", args.user_id)
+      )
+      .first();
+    return !!membership;
+  },
+});

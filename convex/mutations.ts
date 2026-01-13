@@ -466,3 +466,135 @@ export const toggleFollow = mutation({
     }
   },
 });
+
+// ============== COMMUNITY MUTATIONS (Coach Talk) ==============
+
+// Create a new community
+export const createCommunity = mutation({
+  args: {
+    name: v.string(),
+    slug: v.string(),
+    description: v.string(),
+    icon: v.optional(v.string()),
+    created_by: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const communityId = await ctx.db.insert("communities", {
+      name: args.name,
+      slug: args.slug,
+      description: args.description,
+      icon: args.icon,
+      members_count: 1,
+      posts_count: 0,
+      created_by: args.created_by,
+      created_at: Date.now(),
+    });
+
+    // Creator automatically joins
+    await ctx.db.insert("community_members", {
+      community_id: communityId,
+      user_id: args.created_by,
+      joined_at: Date.now(),
+    });
+
+    return { community_id: communityId };
+  },
+});
+
+// Create a post in a community
+export const createCommunityPost = mutation({
+  args: {
+    community_id: v.id("communities"),
+    user_id: v.string(),
+    title: v.string(),
+    content: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const postId = await ctx.db.insert("community_posts", {
+      community_id: args.community_id,
+      user_id: args.user_id,
+      title: args.title,
+      content: args.content,
+      upvotes: 0,
+      downvotes: 0,
+      comments_count: 0,
+      created_at: Date.now(),
+    });
+
+    // Increment posts_count
+    const community = await ctx.db.get(args.community_id);
+    if (community) {
+      await ctx.db.patch(args.community_id, {
+        posts_count: community.posts_count + 1,
+      });
+    }
+
+    return { post_id: postId };
+  },
+});
+
+// Join a community
+export const joinCommunity = mutation({
+  args: {
+    community_id: v.id("communities"),
+    user_id: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("community_members")
+      .withIndex("by_pair", (q) =>
+        q.eq("community_id", args.community_id).eq("user_id", args.user_id)
+      )
+      .first();
+
+    if (existing) {
+      return { already_member: true };
+    }
+
+    await ctx.db.insert("community_members", {
+      community_id: args.community_id,
+      user_id: args.user_id,
+      joined_at: Date.now(),
+    });
+
+    const community = await ctx.db.get(args.community_id);
+    if (community) {
+      await ctx.db.patch(args.community_id, {
+        members_count: community.members_count + 1,
+      });
+    }
+
+    return { success: true };
+  },
+});
+
+// Leave a community
+export const leaveCommunity = mutation({
+  args: {
+    community_id: v.id("communities"),
+    user_id: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("community_members")
+      .withIndex("by_pair", (q) =>
+        q.eq("community_id", args.community_id).eq("user_id", args.user_id)
+      )
+      .first();
+
+    if (existing) {
+      await ctx.db.delete(existing._id);
+
+      const community = await ctx.db.get(args.community_id);
+      if (community && community.members_count > 0) {
+        await ctx.db.patch(args.community_id, {
+          members_count: community.members_count - 1,
+        });
+      }
+
+      return { success: true };
+    }
+
+    return { not_member: true };
+  },
+});

@@ -153,4 +153,44 @@ export default defineSchema({
   })
     .index("by_user", ["user_id"])
     .index("by_status", ["status"]),
+
+  // Communities (Coach Talk) - Reddit-like discussion groups
+  communities: defineTable({
+    name: v.string(),
+    slug: v.string(),
+    description: v.string(),
+    icon: v.optional(v.string()),
+    banner: v.optional(v.string()),
+    members_count: v.number(),
+    posts_count: v.number(),
+    created_by: v.string(),
+    created_at: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_created", ["created_at"]),
+
+  // Community posts/threads
+  community_posts: defineTable({
+    community_id: v.id("communities"),
+    user_id: v.string(),
+    title: v.string(),
+    content: v.string(),
+    upvotes: v.number(),
+    downvotes: v.number(),
+    comments_count: v.number(),
+    created_at: v.number(),
+  })
+    .index("by_community", ["community_id"])
+    .index("by_user", ["user_id"])
+    .index("by_created", ["created_at"]),
+
+  // Community membership
+  community_members: defineTable({
+    community_id: v.id("communities"),
+    user_id: v.string(),
+    joined_at: v.number(),
+  })
+    .index("by_community", ["community_id"])
+    .index("by_user", ["user_id"])
+    .index("by_pair", ["community_id", "user_id"]),
 });

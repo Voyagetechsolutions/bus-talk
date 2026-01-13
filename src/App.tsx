@@ -17,6 +17,7 @@ import Admin from './pages/Admin';
 import Search from './pages/Search';
 import Analytics from './pages/Analytics';
 import SpotBus from './pages/SpotBus';
+import CoachTalk from './pages/CoachTalk';
 
 // Layout wrapper that conditionally shows navbar
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -65,6 +66,7 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/admin/*" element={<Admin />} />
           <Route path="/spot-bus" element={<SpotBus />} />
+          <Route path="/coach-talk" element={<CoachTalk />} />
           <Route path="/search" element={<Search />} />
           <Route path="/analytics" element={<Analytics />} />
         </Routes>
