@@ -1,0 +1,434 @@
+/* News Blog Feed Styles */
+
+/* Feed Container - News Blog Layout */
+.blog-feed {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 16px 100px;
+}
+
+/* Post Card - News Article Style */
+.post-card {
+    background: #1a1a1e;
+    border: 1px solid #262626;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.post-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Card Layout - Image Left, Content Right for Desktop */
+.post-card-inner {
+    display: grid;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+    .post-card.has-media .post-card-inner {
+        grid-template-columns: 280px 1fr;
+    }
+}
+
+/* Media Section */
+.post-card-media {
+    position: relative;
+    background: #0a0a0c;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+}
+
+@media (min-width: 640px) {
+    .post-card.has-media .post-card-media {
+        aspect-ratio: auto;
+        height: 100%;
+        min-height: 200px;
+    }
+}
+
+.post-card-media img,
+.post-card-media video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.post-card-media-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1f1f23, #0a0a0c);
+    color: #3b3b3f;
+    font-size: 48px;
+}
+
+/* Media Navigation */
+.post-media-count {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #fff;
+}
+
+/* Content Section */
+.post-card-content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Author Section */
+.post-author {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.post-author-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.post-author-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.post-author-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.post-author-avatar span {
+    color: #fff;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.post-author-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.post-author-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #f5f5f7;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.post-author-verified {
+    background: #3b82f6;
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.post-author-meta {
+    font-size: 12px;
+    color: #71717a;
+}
+
+.post-follow-btn {
+    background: transparent;
+    border: 1px solid #f59e0b;
+    color: #f59e0b;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.post-follow-btn:hover {
+    background: #f59e0b;
+    color: #000;
+}
+
+.post-follow-btn.following {
+    background: #262626;
+    border-color: #262626;
+    color: #71717a;
+}
+
+/* Post Type Badge */
+.post-type-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.post-type-badge.news {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+}
+
+.post-type-badge.sighting {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+}
+
+/* Post Title */
+.post-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f5f5f7;
+    line-height: 1.3;
+    margin-bottom: 8px;
+}
+
+@media (min-width: 640px) {
+    .post-title {
+        font-size: 22px;
+    }
+}
+
+/* Post Excerpt */
+.post-excerpt {
+    font-size: 14px;
+    color: #a1a1aa;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Post Actions */
+.post-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 16px;
+    border-top: 1px solid #262626;
+    margin-top: auto;
+}
+
+.post-stats {
+    display: flex;
+    gap: 20px;
+}
+
+.post-stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #71717a;
+    font-size: 14px;
+    cursor: pointer;
+    transition: color 0.2s;
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+.post-stat:hover {
+    color: #f5f5f7;
+}
+
+.post-stat.liked {
+    color: #ef4444;
+}
+
+.post-stat svg {
+    width: 18px;
+    height: 18px;
+}
+
+.post-read-more {
+    font-size: 14px;
+    font-weight: 600;
+    color: #f59e0b;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: gap 0.2s;
+}
+
+.post-read-more:hover {
+    gap: 8px;
+}
+
+/* Featured Post (First Post) */
+.post-card.featured {
+    grid-column: 1 / -1;
+}
+
+.post-card.featured .post-card-inner {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .post-card.featured .post-card-inner {
+        grid-template-columns: 1.5fr 1fr;
+    }
+}
+
+.post-card.featured .post-card-media {
+    aspect-ratio: 16 / 9;
+}
+
+.post-card.featured .post-title {
+    font-size: 26px;
+}
+
+@media (min-width: 640px) {
+    .post-card.featured .post-title {
+        font-size: 30px;
+    }
+}
+
+/* Loading Skeleton */
+.skeleton-card {
+    background: #1a1a1e;
+    border: 1px solid #262626;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    overflow: hidden;
+}
+
+.skeleton-card-inner {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+}
+
+@media (max-width: 639px) {
+    .skeleton-card-inner {
+        grid-template-columns: 1fr;
+    }
+}
+
+.skeleton-media {
+    aspect-ratio: 16 / 10;
+    background: linear-gradient(90deg, #262626 25%, #333 50%, #262626 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@media (min-width: 640px) {
+    .skeleton-media {
+        aspect-ratio: auto;
+        min-height: 200px;
+    }
+}
+
+.skeleton-content {
+    padding: 20px;
+}
+
+.skeleton-badge {
+    width: 60px;
+    height: 20px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #262626 25%, #333 50%, #262626 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    margin-bottom: 12px;
+}
+
+.skeleton-title {
+    height: 24px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #262626 25%, #333 50%, #262626 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    margin-bottom: 8px;
+}
+
+.skeleton-text {
+    height: 14px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #262626 25%, #333 50%, #262626 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    margin-bottom: 6px;
+}
+
+.skeleton-text:last-child {
+    width: 70%;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Empty State */
+.feed-empty {
+    text-align: center;
+    padding: 80px 20px;
+    color: #71717a;
+}
+
+.feed-empty-icon {
+    font-size: 64px;
+    margin-bottom: 20px;
+}
+
+.feed-empty h3 {
+    color: #f5f5f7;
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.feed-empty p {
+    margin-bottom: 24px;
+}
+
+.feed-cta-btn {
+    padding: 14px 28px;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    border: none;
+    border-radius: 8px;
+    color: #000;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.feed-cta-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+}
