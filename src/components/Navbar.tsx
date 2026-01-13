@@ -390,20 +390,53 @@ const Navbar: React.FC = () => {
               {user ? (
                 <div className="border-t border-gray-700 pt-4 space-y-2">
                   <div className="flex items-center space-x-3 px-3 py-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-accent-cyan to-blue-500 rounded-full flex items-center justify-center text-black font-bold text-sm">
+                    <div className="w-10 h-10 bg-gradient-to-br from-[#f59e0b] to-[#d97706] rounded-full flex items-center justify-center text-black font-bold text-sm">
                       {user.username?.[0]?.toUpperCase() || 'U'}
                     </div>
                     <div>
                       <p className="font-semibold text-white">{user.username}</p>
                       <p className="text-xs text-gray-400">
-                        {user.role === 'admin' ? 'Admin' : user.spotter_status ? 'Verified Spotter' : 'Regular User'}
+                        {user.role === 'admin' ? '⚙️ Admin' : user.spotter_status ? '✓ Verified Spotter' : 'Regular User'}
                       </p>
                     </div>
                   </div>
+
+                  {/* Post Sighting Button */}
+                  <button
+                    onClick={() => {
+                      setCreatePostModal({ isOpen: true, type: 'sighting' });
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full py-3 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-black rounded-lg font-semibold text-center flex items-center justify-center space-x-2"
+                  >
+                    <span>📸</span>
+                    <span>Post Sighting</span>
+                  </button>
+
+                  {/* Spotter News Button - only for spotters */}
+                  {user.spotter_status && (
+                    <button
+                      onClick={() => {
+                        setCreatePostModal({ isOpen: true, type: 'news' });
+                        setMobileMenuOpen(false);
+                      }}
+                      className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold text-center flex items-center justify-center space-x-2"
+                    >
+                      <span>📰</span>
+                      <span>Write News</span>
+                    </button>
+                  )}
+
                   <Link to="/profile" onClick={closeAllDropdowns} className="flex items-center space-x-3 py-3 px-3 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors">
                     <span>👤</span>
                     <span>My Profile</span>
                   </Link>
+                  {user.role === 'admin' && (
+                    <Link to="/admin" onClick={closeAllDropdowns} className="flex items-center space-x-3 py-3 px-3 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                      <span>⚙️</span>
+                      <span>Admin Panel</span>
+                    </Link>
+                  )}
                   <button onClick={handleSignOut} className="flex items-center space-x-3 py-3 px-3 text-gray-400 w-full text-left font-medium rounded-lg hover:bg-gray-800 transition-colors">
                     <span>🚪</span>
                     <span>Sign Out</span>

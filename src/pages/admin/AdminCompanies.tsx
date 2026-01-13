@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/api';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -9,48 +9,99 @@ import Modal from '../../components/admin/Modal';
 interface Company {
     _id: string;
     name: string;
-    logo_url?: string;
+    logo?: string;
     routes?: string[];
     buses_count?: number;
+    rating_avg?: number;
 }
 
 const AdminCompanies: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCompany, setEditingCompany] = useState<Company | null>(null);
-    const [formData, setFormData] = useState({ name: '', logo_url: '', routes: '' });
+    const [formData, setFormData] = useState({ name: '', routes: '' });
+    const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [logoPreview, setLogoPreview] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const companies = useQuery(api.queries.getCompanies) as Company[] | undefined;
     const createCompany = useMutation(api.mutations.createCompany);
     const deleteCompany = useMutation(api.mutations.deleteCompany);
+    const generateUploadUrl = useMutation(api.storage.generateUploadUrl as any);
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && file.type.startsWith('image/')) {
+            setLogoFile(file);
+            setLogoPreview(URL.createObjectURL(file));
+        }
+    };
 
     const handleOpenModal = (company?: Company) => {
         if (company) {
             setEditingCompany(company);
             setFormData({
                 name: company.name,
-                logo_url: company.logo_url || '',
                 routes: company.routes?.join(', ') || ''
             });
+            setLogoPreview(company.logo || null);
         } else {
             setEditingCompany(null);
-            setFormData({ name: '', logo_url: '', routes: '' });
+            setFormData({ name: '', routes: '' });
+            setLogoFile(null);
+            setLogoPreview(null);
         }
         setIsModalOpen(true);
     };
 
+    const uploadLogo = async (file: File): Promise<string | undefined> => {
+        try {
+            const uploadUrl = await generateUploadUrl();
+            const response = await fetch(uploadUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': file.type },
+                body: file,
+            });
+
+            if (!response.ok) {
+                console.error('Logo upload failed');
+                return undefined;
+            }
+
+            const { storageId } = await response.json();
+            // Return the storage URL that will be resolved
+            return storageId;
+        } catch (error) {
+            console.error('Upload error:', error);
+            return undefined;
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setUploading(true);
+
         try {
+            let logoStorageId: string | undefined;
+
+            // Upload logo if selected
+            if (logoFile) {
+                logoStorageId = await uploadLogo(logoFile);
+            }
+
             await createCompany({
                 name: formData.name,
-                logo_url: formData.logo_url || undefined,
-                routes: formData.routes.split(',').map(r => r.trim()).filter(Boolean)
+                logo: logoStorageId,
             });
+
             setIsModalOpen(false);
-            setFormData({ name: '', logo_url: '', routes: '' });
+            setFormData({ name: '', routes: '' });
+            setLogoFile(null);
+            setLogoPreview(null);
         } catch (error) {
             console.error('Failed to create company:', error);
         }
+        setUploading(false);
     };
 
     const handleDelete = async (company: Company) => {
@@ -70,7 +121,7 @@ const AdminCompanies: React.FC = () => {
             width: '60px',
             render: (c: Company) => (
                 <div className="table-logo">
-                    {c.logo_url ? <img src={c.logo_url} alt={c.name} /> : '🏢'}
+                    {c.logo ? <img src={c.logo} alt={c.name} /> : '🏢'}
                 </div>
             )
         },
@@ -81,21 +132,13 @@ const AdminCompanies: React.FC = () => {
             render: (c: Company) => c.buses_count || 0
         },
         {
-            key: 'routes',
-            label: 'Routes',
-            render: (c: Company) => (
-                <div className="route-tags">
-                    {c.routes?.slice(0, 3).map((r, i) => (
-                        <span key={i} className="route-tag">{r}</span>
-                    ))}
-                    {(c.routes?.length || 0) > 3 && <span className="route-tag">+{(c.routes?.length || 0) - 3}</span>}
-                </div>
-            )
+            key: 'rating_avg',
+            label: 'Rating',
+            render: (c: Company) => `⭐ ${(c.rating_avg || 0).toFixed(1)}`
         }
     ];
 
     const totalBuses = companies?.reduce((sum, c) => sum + (c.buses_count || 0), 0) || 0;
-    const totalRoutes = companies?.reduce((sum, c) => sum + (c.routes?.length || 0), 0) || 0;
 
     return (
         <AdminLayout
@@ -110,7 +153,6 @@ const AdminCompanies: React.FC = () => {
             <div className="stats-grid">
                 <StatsCard icon="🏢" value={companies?.length || 0} label="Total Companies" />
                 <StatsCard icon="🚌" value={totalBuses} label="Total Buses" />
-                <StatsCard icon="🛤️" value={totalRoutes} label="Total Routes" />
             </div>
 
             <DataTable
@@ -131,8 +173,8 @@ const AdminCompanies: React.FC = () => {
                         <button className="btn-secondary" onClick={() => setIsModalOpen(false)}>
                             Cancel
                         </button>
-                        <button className="btn-primary" onClick={handleSubmit}>
-                            {editingCompany ? 'Update' : 'Create'}
+                        <button className="btn-primary" onClick={handleSubmit} disabled={uploading}>
+                            {uploading ? 'Uploading...' : editingCompany ? 'Update' : 'Create'}
                         </button>
                     </>
                 }
@@ -150,26 +192,74 @@ const AdminCompanies: React.FC = () => {
                     </div>
 
                     <div className="form-group">
-                        <label>Logo URL</label>
+                        <label>Company Logo</label>
                         <input
-                            type="url"
-                            value={formData.logo_url}
-                            onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
-                            placeholder="https://example.com/logo.png"
+                            type="file"
+                            ref={fileInputRef}
+                            accept="image/*"
+                            onChange={handleFileSelect}
+                            className="hidden"
                         />
-                    </div>
-
-                    <div className="form-group">
-                        <label>Routes (comma-separated)</label>
-                        <input
-                            type="text"
-                            value={formData.routes}
-                            onChange={(e) => setFormData({ ...formData, routes: e.target.value })}
-                            placeholder="e.g., Route 1, Route 2, A01"
-                        />
+                        <div
+                            className="logo-upload-area"
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            {logoPreview ? (
+                                <img src={logoPreview} alt="Logo preview" className="logo-preview" />
+                            ) : (
+                                <div className="logo-placeholder">
+                                    <span>📷</span>
+                                    <p>Click to upload logo</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </form>
             </Modal>
+
+            <style>{`
+        .hidden {
+          display: none;
+        }
+        
+        .logo-upload-area {
+          width: 100%;
+          height: 120px;
+          border: 2px dashed #333;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+          overflow: hidden;
+        }
+        
+        .logo-upload-area:hover {
+          border-color: #f59e0b;
+          background: rgba(245, 158, 11, 0.05);
+        }
+        
+        .logo-preview {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+        }
+        
+        .logo-placeholder {
+          text-align: center;
+          color: #666;
+        }
+        
+        .logo-placeholder span {
+          font-size: 32px;
+        }
+        
+        .logo-placeholder p {
+          margin-top: 8px;
+          font-size: 13px;
+        }
+      `}</style>
         </AdminLayout>
     );
 };
