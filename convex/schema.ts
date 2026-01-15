@@ -238,6 +238,18 @@ export default defineSchema({
   })
     .index("by_post", ["post_id"])
     .index("by_user_post", ["user_id", "post_id"]),
+  // Company ratings
+  company_ratings: defineTable({
+    user_id: v.string(),
+    company_id: v.id("companies"),
+    rating: v.number(),
+    comment: v.optional(v.string()),
+    created_at: v.number(),
+    updated_at: v.optional(v.number()),
+  })
+    .index("by_company", ["company_id"])
+    .index("by_user_company", ["user_id", "company_id"]),
+
   // Community membership
   community_members: defineTable({
     community_id: v.id("communities"),

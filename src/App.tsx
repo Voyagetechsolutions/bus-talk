@@ -22,6 +22,7 @@ import CommunityDetail from './pages/CommunityDetail';
 import RoutesPage from './pages/Routes';
 import './media-fix.css';
 import './company-fix.css';
+import './companies-grid.css';
 
 // Layout wrapper that conditionally shows navbar
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {

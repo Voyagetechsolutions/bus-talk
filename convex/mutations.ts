@@ -940,3 +940,53 @@ export const seedCommunities = mutation({
     return { success: true };
   },
 });
+// Rate a company
+export const rateCompany = mutation({
+  args: {
+    user_id: v.string(),
+    company_id: v.id("companies"),
+    rating: v.number(),
+    comment: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Check if user already rated this company
+    const existing = await ctx.db
+      .query("company_ratings")
+      .withIndex("by_user_company", (q) =>
+        q.eq("user_id", args.user_id).eq("company_id", args.company_id)
+      )
+      .first();
+
+    if (existing) {
+      // Update existing rating
+      await ctx.db.patch(existing._id, {
+        rating: args.rating,
+        comment: args.comment,
+        updated_at: Date.now(),
+      });
+    } else {
+      // Create new rating
+      await ctx.db.insert("company_ratings", {
+        user_id: args.user_id,
+        company_id: args.company_id,
+        rating: args.rating,
+        comment: args.comment,
+        created_at: Date.now(),
+      });
+    }
+
+    // Recalculate company average rating
+    const ratings = await ctx.db
+      .query("company_ratings")
+      .withIndex("by_company", (q) => q.eq("company_id", args.company_id))
+      .collect();
+
+    const avgRating = ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length;
+
+    await ctx.db.patch(args.company_id, {
+      rating_avg: avgRating,
+    });
+
+    return { success: true, new_average: avgRating };
+  },
+});

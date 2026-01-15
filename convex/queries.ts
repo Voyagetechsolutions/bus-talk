@@ -517,3 +517,15 @@ export const getTopNominees = query({
     return [];
   },
 });
+// Get comments for a community post
+export const getCommunityComments = query({
+  args: { post_id: v.id("community_posts") },
+  handler: async (ctx, args) => {
+    const comments = await ctx.db
+      .query("community_comments")
+      .withIndex("by_post", (q) => q.eq("post_id", args.post_id))
+      .order("desc")
+      .collect();
+    return comments;
+  },
+});

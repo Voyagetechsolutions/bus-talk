@@ -30,14 +30,6 @@ const CoachTalk: React.FC = () => {
     const createCommunity = useMutation(api.mutations.createCommunity as any);
     const joinCommunity = useMutation(api.mutations.joinCommunity as any);
     const leaveCommunity = useMutation(api.mutations.leaveCommunity as any);
-    const seedCommunities = useMutation(api.mutations.seedCommunities as any);
-
-    // Seed communities on first load if none exist
-    React.useEffect(() => {
-        if (communities && communities.length === 0) {
-            seedCommunities();
-        }
-    }, [communities, seedCommunities]);
 
     const handleCreate = async () => {
         if (!user?.id || !newCommunity.name) return;
@@ -70,14 +62,7 @@ const CoachTalk: React.FC = () => {
         await leaveCommunity({ community_id: communityId, user_id: user.id });
     };
 
-    const defaultCommunities = [
-        { name: 'Golden Arrow Bus Services', icon: '🚌', slug: 'gabs', members: 234 },
-        { name: 'MyCiTi Fans', icon: '🔵', slug: 'myciti', members: 189 },
-        { name: 'Intercape Travellers', icon: '🛣️', slug: 'intercape', members: 156 },
-        { name: 'Greyhound SA', icon: '🐕', slug: 'greyhound', members: 98 },
-        { name: 'Bus Photography', icon: '📷', slug: 'photography', members: 321 },
-        { name: 'Route Discussions', icon: '🗺️', slug: 'routes', members: 187 },
-    ];
+
 
     return (
         <div className="coach-talk-page">
@@ -121,42 +106,37 @@ const CoachTalk: React.FC = () => {
             <section className="communities-section">
                 <h2>🔥 Popular Communities</h2>
                 <div className="communities-grid">
-                    {/* Show from database if available */}
-                    {communities && communities.map((c) => (
-                        <div key={c._id} className="community-card">
-                            <Link to={`/coach-talk/${c.slug}`} className="community-icon">
-                                {c.icon || '💬'}
-                            </Link>
-                            <div className="community-info">
-                                <Link to={`/coach-talk/${c.slug}`} className="community-link">
-                                    <h3>{c.name}</h3>
+                    {/* Show from database */}
+                    {communities && communities.length > 0 ? (
+                        communities.map((c) => (
+                            <div key={c._id} className="community-card">
+                                <Link to={`/coach-talk/${c.slug}`} className="community-icon">
+                                    {c.icon || '💬'}
                                 </Link>
-                                <p>{c.description}</p>
-                                <span className="members">{c.members_count} members • {c.posts_count} posts</span>
-                            </div>
-                            {user ? (
-                                memberships?.includes(c._id) ? (
-                                    <button className="join-btn joined" onClick={() => handleLeave(c._id)}>Joined</button>
+                                <div className="community-info">
+                                    <Link to={`/coach-talk/${c.slug}`} className="community-link">
+                                        <h3>{c.name}</h3>
+                                    </Link>
+                                    <p>{c.description}</p>
+                                    <span className="members">{c.members_count} members • {c.posts_count} posts</span>
+                                </div>
+                                {user ? (
+                                    memberships?.includes(c._id) ? (
+                                        <button className="join-btn joined" onClick={() => handleLeave(c._id)}>Joined</button>
+                                    ) : (
+                                        <button className="join-btn" onClick={() => handleJoin(c._id)}>Join</button>
+                                    )
                                 ) : (
-                                    <button className="join-btn" onClick={() => handleJoin(c._id)}>Join</button>
-                                )
-                            ) : (
-                                <Link to={`/coach-talk/${c.slug}`} className="join-btn view-btn">View</Link>
-                            )}
-                        </div>
-                    ))}
-
-                    {/* Default suggestions if no communities yet */}
-                    {(!communities || communities.length === 0) && defaultCommunities.map((c, i) => (
-                        <div key={i} className="community-card suggested">
-                            <div className="community-icon">{c.icon}</div>
-                            <div className="community-info">
-                                <h3>{c.name}</h3>
-                                <span className="members">{c.members} members</span>
+                                    <Link to={`/coach-talk/${c.slug}`} className="join-btn view-btn">View</Link>
+                                )}
                             </div>
-                            <button className="join-btn">Coming Soon</button>
+                        ))
+                    ) : (
+                        <div className="empty-state">
+                            <h3>No communities yet</h3>
+                            <p>Be the first to create a community!</p>
                         </div>
-                    ))}
+                    )}
                 </div>
             </section>
 

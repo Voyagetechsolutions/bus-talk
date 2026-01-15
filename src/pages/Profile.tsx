@@ -35,11 +35,10 @@ const Profile: React.FC = () => {
     const userPosts = posts.posts.filter((p: any) => p.user_id === user.id);
     const postsCount = userPosts.length;
     
-    // Mock data for now since we don't have ratings/boosts in Convex yet
     setStats({
       postsCount,
-      ratingsCount: Math.floor(Math.random() * 20),
-      boostsCount: Math.floor(Math.random() * 10),
+      ratingsCount: 0, // Will be updated when ratings system is implemented
+      boostsCount: 0,  // Will be updated when boosts system is implemented
       rank: 0
     });
 

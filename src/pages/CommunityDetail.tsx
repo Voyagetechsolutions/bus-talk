@@ -3,6 +3,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../convex/api';
 import { useAppStore } from '../hooks/useStore';
+import CommentSystem from '../components/CommentSystem';
 import type { Id } from '../convex/_generated/dataModel';
 
 const CommunityDetail: React.FC = () => {
@@ -240,6 +241,7 @@ const CommunityDetail: React.FC = () => {
                     ))}
                   </div>
                 )}
+                <CommentSystem postId={post._id} />
               </article>
             ))
           ) : (

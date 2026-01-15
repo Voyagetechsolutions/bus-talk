@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../convex/api';
 import { useAppStore } from '../hooks/useStore';
@@ -9,6 +9,10 @@ const Companies: React.FC = () => {
   const { user } = useAppStore();
   const companies = useQuery(api.queries.getCompanies as any);
   const castVote = useMutation(api.mutations.castVote as any);
+  const rateCompany = useMutation(api.mutations.rateCompany as any);
+  const [ratingModal, setRatingModal] = useState<{ isOpen: boolean; company: any | null }>({ isOpen: false, company: null });
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
   const voterId = user?.id || getAnonymousId();
   const { week, year } = getIsoWeek(new Date());
   const voteSummary = useQuery(api.queries.getVoteSummary as any, {
@@ -43,6 +47,35 @@ const Companies: React.FC = () => {
       role: user?.role,
       spotter_status: user?.spotter_status,
     });
+  };
+
+  const openRatingModal = (company: any) => {
+    setRatingModal({ isOpen: true, company });
+    setRating(0);
+    setComment('');
+  };
+
+  const closeRatingModal = () => {
+    setRatingModal({ isOpen: false, company: null });
+    setRating(0);
+    setComment('');
+  };
+
+  const handleRateCompany = async () => {
+    if (!user) {
+      alert('Please sign in to rate companies');
+      return;
+    }
+    if (!ratingModal.company || rating === 0) return;
+    
+    await rateCompany({
+      user_id: user.id,
+      company_id: ratingModal.company._id,
+      rating,
+      comment: comment.trim() || undefined,
+    });
+    
+    closeRatingModal();
   };
 
   return (
@@ -92,38 +125,92 @@ const Companies: React.FC = () => {
         </div>
       </section>
 
-      {/* All Companies Table */}
-      {restCompanies.length > 0 && (
-        <section className="list-section">
-          <h2 className="section-label">All Companies</h2>
-          <div className="data-table">
-            <div className="table-header">
-              <span>#</span>
-              <span>Company</span>
-              <span>Buses</span>
-              <span>Routes</span>
-              <span>Rating</span>
-            </div>
-            {restCompanies.map((company, index) => (
-              <div key={company._id} className="table-row">
-                <span className="col-rank">{index + 4}</span>
-                <span className="col-name">
-                  <div className="row-avatar">
-                    {company.logo ? (
-                      <img src={company.logo} alt={company.name} />
-                    ) : (
-                      company.name[0]
-                    )}
-                  </div>
-                  <span className="row-title">{company.name}</span>
-                </span>
-                <span className="col-stat">{company.buses_count || 0}</span>
-                <span className="col-stat">{company.routes_count || 0}</span>
-                <span className="col-stat highlight">⭐ {company.rating_avg?.toFixed(1) || '0.0'}</span>
+      {/* All Companies Grid */}
+      <section className="list-section">
+        <h2 className="section-label">All Companies</h2>
+        <div className="companies-grid">
+          {companies?.map((company) => (
+            <div key={company._id} className="company-card">
+              <div className="company-logo">
+                {company.logo ? (
+                  <img src={company.logo} alt={company.name} />
+                ) : (
+                  <span>{company.name[0]}</span>
+                )}
               </div>
-            ))}
+              <div className="company-info">
+                <h3 className="company-name">{company.name}</h3>
+                <div className="company-stats">
+                  <span className="rating">⭐ {company.rating_avg?.toFixed(1) || '0.0'}</span>
+                  <span>{company.buses_count || 0} buses</span>
+                  <span>{company.routes_count || 0} routes</span>
+                </div>
+              </div>
+              <div className="company-actions">
+                <button
+                  className={`action-btn nominate ${userVote ? 'disabled' : ''}`}
+                  onClick={() => handleNominate(company._id)}
+                  disabled={!!userVote}
+                >
+                  {userVote === company._id ? 'Nominated' : 'Nominate'}
+                </button>
+                <button
+                  className="action-btn rate"
+                  onClick={() => openRatingModal(company)}
+                >
+                  Rate Company
+                </button>
+              </div>
+            </div>
+          )) || []}
+        </div>
+      </section>
+
+      {/* Rating Modal */}
+      {ratingModal.isOpen && (
+        <div className="modal-overlay" onClick={closeRatingModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Rate {ratingModal.company?.name}</h3>
+              <button className="modal-close" onClick={closeRatingModal}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="rating-section">
+                <label>Overall Rating</label>
+                <div className="star-rating">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button
+                      key={star}
+                      onClick={() => setRating(star)}
+                      className={`star ${star <= rating ? 'active' : ''}`}
+                    >
+                      ⭐
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="comment-section">
+                <label>Comment (optional)</label>
+                <textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Share your experience with this company..."
+                  maxLength={200}
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={closeRatingModal}>Cancel</button>
+              <button 
+                className="btn-submit" 
+                onClick={handleRateCompany}
+                disabled={rating === 0}
+              >
+                Submit Rating
+              </button>
+            </div>
           </div>
-        </section>
+        </div>
       )}
     </div>
   );
