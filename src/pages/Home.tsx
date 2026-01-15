@@ -7,6 +7,7 @@ import { useAppStore } from '../hooks/useStore';
 import FeedPost, { FeedPostSkeleton } from '../components/FeedPost';
 import CommentSection from '../components/CommentSection';
 import { prefetchUsers } from '../utils/userCache';
+import { getIsoWeek } from '../utils/date';
 import '../styles/feed.css';
 
 const Home: React.FC = () => {
@@ -18,6 +19,15 @@ const Home: React.FC = () => {
   const loading = feedData === undefined;
   const posts = feedData?.posts || [];
   const currentUserId = user?.id;
+
+  const { week, year } = getIsoWeek(new Date());
+  const busOfWeek = useQuery(api.queries.getTopNominees as any, {
+    category: 'bus_of_week',
+    year,
+    week,
+    limit: 1,
+  });
+  const winner = busOfWeek?.[0];
 
   // Prefetch user data for all posts
   useEffect(() => {
@@ -39,14 +49,73 @@ const Home: React.FC = () => {
           </p>
         </div>
         <div className="blog-actions">
-          <button className="blog-cta primary" onClick={() => navigate('/spot-bus')}>
-            📷 Post Sighting
-          </button>
           <button className="blog-cta secondary" onClick={() => navigate('/posts')}>
             📰 Spotter News
           </button>
         </div>
       </header>
+
+      {/* Bus of the Week Banner */}
+      {winner && (
+        <section className="bus-of-week-banner">
+          <div className="banner-badge">🏆 BUS OF THE WEEK</div>
+          <div className="banner-content">
+            <div className="banner-photo">
+              {winner.photos?.[0] ? (
+                <img src={winner.photos[0]} alt={winner.fleet_number} />
+              ) : (
+                <div className="banner-photo-placeholder">🚌</div>
+              )}
+            </div>
+            <div className="banner-info">
+              <h2 className="banner-title">{winner.company?.name} {winner.fleet_number}</h2>
+              <div className="banner-stats">
+                <span>⭐ {winner.rating_avg?.toFixed(1) || '0.0'}</span>
+                <span>•</span>
+                <span>🗳️ {winner.votes} votes</span>
+              </div>
+              <p className="banner-route">{winner.route} | {winner.type || 'Standard'}</p>
+              <div className="banner-actions">
+                <button className="banner-btn primary" onClick={() => navigate('/buses')}>
+                  View Profile
+                </button>
+                <button className="banner-btn secondary" onClick={() => navigate('/vote')}>
+                  Vote Next Week
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Explore Section */}
+      <section className="blog-section">
+        <div className="section-header">
+          <h2>Explore</h2>
+        </div>
+        <div className="explore-grid">
+          <button className="explore-card" onClick={() => navigate('/routes')}>
+            <span className="explore-icon">🗺️</span>
+            <h3>Routes</h3>
+            <p>Find best service by route</p>
+          </button>
+          <button className="explore-card" onClick={() => navigate('/buses')}>
+            <span className="explore-icon">🚌</span>
+            <h3>Buses</h3>
+            <p>Browse fleet ratings</p>
+          </button>
+          <button className="explore-card" onClick={() => navigate('/companies')}>
+            <span className="explore-icon">🏢</span>
+            <h3>Companies</h3>
+            <p>Compare operators</p>
+          </button>
+          <button className="explore-card" onClick={() => navigate('/drivers')}>
+            <span className="explore-icon">👨‍✈️</span>
+            <h3>Drivers</h3>
+            <p>Top rated drivers</p>
+          </button>
+        </div>
+      </section>
 
       {/* Latest Posts Section */}
       <section className="blog-section">
@@ -79,9 +148,6 @@ const Home: React.FC = () => {
             <div className="feed-empty-icon">🚌</div>
             <h3>No Posts Yet</h3>
             <p>Be the first to share a bus sighting or news update!</p>
-            <button className="feed-cta-btn" onClick={() => navigate('/spot-bus')}>
-              📸 Post a Sighting
-            </button>
           </div>
         )}
       </main>
@@ -201,6 +267,187 @@ const Home: React.FC = () => {
         .section-count {
           color: #71717a;
           font-size: 14px;
+        }
+
+        .bus-of-week-banner {
+          max-width: 900px;
+          margin: 0 auto 32px;
+          padding: 0 16px;
+        }
+
+        .banner-badge {
+          display: inline-block;
+          background: linear-gradient(135deg, #f59e0b, #d97706);
+          color: #000;
+          padding: 6px 16px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 1px;
+          margin-bottom: 16px;
+        }
+
+        .banner-content {
+          display: grid;
+          grid-template-columns: 200px 1fr;
+          gap: 24px;
+          background: linear-gradient(135deg, #1a1a1e 0%, #0f0f12 100%);
+          border: 1px solid #f59e0b;
+          border-radius: 16px;
+          padding: 24px;
+          box-shadow: 0 8px 32px rgba(245, 158, 11, 0.2);
+        }
+
+        @media (max-width: 640px) {
+          .banner-content {
+            grid-template-columns: 1fr;
+            text-align: center;
+          }
+        }
+
+        .banner-photo {
+          width: 200px;
+          height: 150px;
+          border-radius: 12px;
+          overflow: hidden;
+          background: #0a0a0c;
+        }
+
+        @media (max-width: 640px) {
+          .banner-photo {
+            width: 100%;
+            height: 200px;
+            margin: 0 auto;
+          }
+        }
+
+        .banner-photo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .banner-photo-placeholder {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 48px;
+        }
+
+        .banner-info {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+
+        .banner-title {
+          font-size: 24px;
+          font-weight: 700;
+          color: #fff;
+          margin-bottom: 8px;
+        }
+
+        .banner-stats {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          color: #888;
+          margin-bottom: 8px;
+        }
+
+        @media (max-width: 640px) {
+          .banner-stats {
+            justify-content: center;
+          }
+        }
+
+        .banner-route {
+          font-size: 14px;
+          color: #aaa;
+          margin-bottom: 16px;
+        }
+
+        .banner-actions {
+          display: flex;
+          gap: 12px;
+        }
+
+        @media (max-width: 640px) {
+          .banner-actions {
+            justify-content: center;
+          }
+        }
+
+        .banner-btn {
+          padding: 10px 20px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          border: none;
+        }
+
+        .banner-btn.primary {
+          background: linear-gradient(135deg, #f59e0b, #d97706);
+          color: #000;
+        }
+
+        .banner-btn.primary:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+        }
+
+        .banner-btn.secondary {
+          background: #1f1f23;
+          color: #f5f5f7;
+          border: 1px solid #333;
+        }
+
+        .banner-btn.secondary:hover {
+          background: #2a2a2e;
+        }
+
+        .explore-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 16px;
+          margin-bottom: 32px;
+        }
+
+        .explore-card {
+          background: #1a1a1e;
+          border: 1px solid #262626;
+          border-radius: 12px;
+          padding: 24px;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .explore-card:hover {
+          border-color: #f59e0b;
+          transform: translateY(-2px);
+        }
+
+        .explore-icon {
+          font-size: 32px;
+          display: block;
+          margin-bottom: 12px;
+        }
+
+        .explore-card h3 {
+          font-size: 16px;
+          font-weight: 600;
+          margin-bottom: 4px;
+        }
+
+        .explore-card p {
+          font-size: 13px;
+          color: #71717a;
         }
       `}</style>
     </div>

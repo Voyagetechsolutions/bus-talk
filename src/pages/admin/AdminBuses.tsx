@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/api';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -15,6 +15,7 @@ interface Bus {
     type?: string;
     year?: number;
     rating_avg?: number;
+    photos?: string[];
 }
 
 interface Company {
@@ -42,11 +43,35 @@ const AdminBuses: React.FC = () => {
         type: '',
         year: ''
     });
+    const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+    const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+    const [uploading, setUploading] = useState(false);
+    const photoInputRef = useRef<HTMLInputElement>(null);
 
     const buses = useQuery(api.queries.getBuses, { limit: 100 }) as Bus[] | undefined;
     const companies = useQuery(api.queries.getCompanies) as Company[] | undefined;
     const createBus = useMutation(api.mutations.createBus);
     const deleteBus = useMutation(api.mutations.deleteBus);
+    const generateUploadUrl = useMutation(api.storage.generateUploadUrl as any);
+
+    const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []).filter((file) =>
+            file.type.startsWith('image/')
+        );
+        const previews = files.map((file) => URL.createObjectURL(file));
+        setPhotoFiles((prev) => [...prev, ...files]);
+        setPhotoPreviews((prev) => [...prev, ...previews]);
+    };
+
+    const removePhoto = (index: number) => {
+        setPhotoPreviews((prev) => {
+            const next = [...prev];
+            const [removed] = next.splice(index, 1);
+            if (removed) URL.revokeObjectURL(removed);
+            return next;
+        });
+        setPhotoFiles((prev) => prev.filter((_, i) => i !== index));
+    };
 
     const handleOpenModal = (bus?: Bus) => {
         if (bus) {
@@ -58,28 +83,62 @@ const AdminBuses: React.FC = () => {
                 type: bus.type || '',
                 year: bus.year?.toString() || ''
             });
+            setPhotoPreviews(bus.photos || []);
+            setPhotoFiles([]);
         } else {
             setEditingBus(null);
             setFormData({ fleet_number: '', company_id: '', route: '', type: '', year: '' });
+            setPhotoFiles([]);
+            setPhotoPreviews([]);
         }
         setIsModalOpen(true);
     };
 
+    const uploadPhoto = async (file: File): Promise<string | undefined> => {
+        try {
+            const uploadUrl = await generateUploadUrl();
+            const response = await fetch(uploadUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': file.type },
+                body: file,
+            });
+            if (!response.ok) {
+                console.error('Photo upload failed');
+                return undefined;
+            }
+            const { storageId } = await response.json();
+            return storageId;
+        } catch (error) {
+            console.error('Upload error:', error);
+            return undefined;
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setUploading(true);
         try {
+            const uploadedPhotos: string[] = [];
+            for (const file of photoFiles) {
+                const storageId = await uploadPhoto(file);
+                if (storageId) uploadedPhotos.push(storageId);
+            }
             await createBus({
                 fleet_number: formData.fleet_number,
                 company_id: formData.company_id || undefined,
                 route: formData.route,
                 type: formData.type || undefined,
-                year: formData.year ? parseInt(formData.year) : undefined
+                year: formData.year ? parseInt(formData.year) : undefined,
+                photos: uploadedPhotos.length > 0 ? uploadedPhotos : undefined,
             });
             setIsModalOpen(false);
             setFormData({ fleet_number: '', company_id: '', route: '', type: '', year: '' });
+            setPhotoFiles([]);
+            setPhotoPreviews([]);
         } catch (error) {
             console.error('Failed to create bus:', error);
         }
+        setUploading(false);
     };
 
     const handleDelete = async (bus: Bus) => {
@@ -93,6 +152,16 @@ const AdminBuses: React.FC = () => {
     };
 
     const columns = [
+        {
+            key: 'photos',
+            label: 'Photo',
+            width: '60px',
+            render: (b: Bus) => (
+                <div className="table-logo">
+                    {b.photos?.[0] ? <img src={b.photos[0]} alt={b.fleet_number} /> : 'dY"ú'}
+                </div>
+            )
+        },
         { key: 'fleet_number', label: 'Fleet #', width: '100px' },
         {
             key: 'company',
@@ -152,8 +221,8 @@ const AdminBuses: React.FC = () => {
                         <button className="btn-secondary" onClick={() => setIsModalOpen(false)}>
                             Cancel
                         </button>
-                        <button className="btn-primary" onClick={handleSubmit}>
-                            {editingBus ? 'Update' : 'Create'}
+                        <button className="btn-primary" onClick={handleSubmit} disabled={uploading}>
+                            {uploading ? 'Uploading...' : editingBus ? 'Update' : 'Create'}
                         </button>
                     </>
                 }
@@ -220,6 +289,41 @@ const AdminBuses: React.FC = () => {
                                 <option key={type} value={type}>{type}</option>
                             ))}
                         </select>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Bus Photos</label>
+                        <input
+                            type="file"
+                            ref={photoInputRef}
+                            accept="image/*"
+                            multiple
+                            onChange={handlePhotoSelect}
+                            className="hidden"
+                        />
+                        <button
+                            type="button"
+                            className="upload-btn"
+                            onClick={() => photoInputRef.current?.click()}
+                        >
+                            dY"ú Add Photos
+                        </button>
+                        {photoPreviews.length > 0 && (
+                            <div className="media-preview-grid">
+                                {photoPreviews.map((src, index) => (
+                                    <div key={`${src}-${index}`} className="media-preview-item">
+                                        <img src={src} alt="" className="preview-media" />
+                                        <button
+                                            type="button"
+                                            onClick={() => removePhoto(index)}
+                                            className="remove-media-btn"
+                                        >
+                                            A-
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </form>
             </Modal>

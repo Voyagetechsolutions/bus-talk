@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../convex/api';
 import { useAppStore } from '../hooks/useStore';
-import { supabase } from '../utils/supabase';
 
 interface Company {
   id: string;
@@ -18,13 +19,18 @@ interface Bus {
 
 const RateTrip: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAppStore();
+  const busIdFromState = (location.state as any)?.busId;
   
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [buses, setBuses] = useState<Bus[]>([]);
+  const companies = useQuery(api.queries.getCompanies as any);
+  const buses = useQuery(api.queries.getBuses as any, { limit: 100 });
+  const createRating = useMutation(api.mutations.createRating as any);
+  
   const [selectedCompany, setSelectedCompany] = useState<string>('');
   const [selectedBus, setSelectedBus] = useState<string>('');
   const [overallRating, setOverallRating] = useState<number>(0);
+  const [companySearch, setCompanySearch] = useState<string>('');
   const [showDetails, setShowDetails] = useState(false);
   const [detailRatings, setDetailRatings] = useState({
     punctuality: 0,
@@ -37,56 +43,43 @@ const RateTrip: React.FC = () => {
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
-    fetchCompanies();
-  }, []);
-
-  useEffect(() => {
-    if (selectedCompany) {
-      fetchBuses(selectedCompany);
+    if (busIdFromState && buses) {
+      const bus = buses.find((b: any) => b._id === busIdFromState);
+      if (bus) {
+        setSelectedCompany(bus.company_id);
+        setSelectedBus(bus._id);
+      }
     }
-  }, [selectedCompany]);
+  }, [busIdFromState, buses]);
 
-  const fetchCompanies = async () => {
-    const { data } = await supabase
-      .from('companies')
-      .select('id, name, logo')
-      .order('name');
-    if (data) setCompanies(data);
-  };
+  const filteredCompanies = companies?.filter((c: any) => 
+    c.name.toLowerCase().includes(companySearch.toLowerCase())
+  ) || [];
 
-  const fetchBuses = async (companyId: string) => {
-    const { data } = await supabase
-      .from('buses')
-      .select('id, fleet_number, route')
-      .eq('company_id', companyId)
-      .order('fleet_number');
-    if (data) setBuses(data);
-  };
+  const filteredBuses = buses?.filter((b: any) => 
+    selectedCompany ? b.company_id === selectedCompany : false
+  ) || [];
 
   const handleSubmit = async () => {
     if (!user || !selectedBus || overallRating === 0) return;
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('ratings')
-        .insert({
-          user_id: user.id,
-          bus_id: selectedBus,
-          trip_date: new Date().toISOString().split('T')[0],
-          punctuality: detailRatings.punctuality || overallRating,
-          cleanliness: detailRatings.cleanliness || overallRating,
-          comfort: detailRatings.comfort || overallRating,
-          behavior: detailRatings.behavior || overallRating,
-          comment: comment.trim() || null
-        });
+      await createRating({
+        user_id: user.id,
+        bus_id: selectedBus,
+        trip_date: new Date().toISOString().split('T')[0],
+        punctuality: detailRatings.punctuality || overallRating,
+        cleanliness: detailRatings.cleanliness || overallRating,
+        comfort: detailRatings.comfort || overallRating,
+        behavior: detailRatings.behavior || overallRating,
+        comment: comment.trim() || undefined
+      });
 
-      if (!error) {
-        setSubmitted(true);
-        setTimeout(() => {
-          navigate('/');
-        }, 3000);
-      }
+      setSubmitted(true);
+      setTimeout(() => {
+        navigate('/');
+      }, 3000);
     } catch (error) {
       console.error('Rating submission error:', error);
     }
@@ -147,14 +140,21 @@ const RateTrip: React.FC = () => {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2">Company</label>
+            <input
+              type="text"
+              placeholder="🔍 Search company..."
+              value={companySearch}
+              onChange={(e) => setCompanySearch(e.target.value)}
+              className="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-accent-cyan mb-2"
+            />
             <select
               value={selectedCompany}
               onChange={(e) => setSelectedCompany(e.target.value)}
               className="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-accent-cyan"
             >
               <option value="">Select company...</option>
-              {companies.map(company => (
-                <option key={company.id} value={company.id}>{company.name}</option>
+              {filteredCompanies.map((company: any) => (
+                <option key={company._id} value={company._id}>{company.name}</option>
               ))}
             </select>
           </div>
@@ -168,8 +168,8 @@ const RateTrip: React.FC = () => {
                 className="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-accent-cyan"
               >
                 <option value="">Select bus...</option>
-                {buses.map(bus => (
-                  <option key={bus.id} value={bus.id}>
+                {filteredBuses.map((bus: any) => (
+                  <option key={bus._id} value={bus._id}>
                     {bus.fleet_number} - {bus.route}
                   </option>
                 ))}

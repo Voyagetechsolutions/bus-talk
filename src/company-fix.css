@@ -1,0 +1,25 @@
+/* Company Logo Fixes */
+.featured-avatar {
+  background: var(--bg-elevated) !important;
+  border-radius: 8px !important;
+  color: var(--text-primary) !important;
+}
+
+.featured-avatar img {
+  object-fit: contain !important;
+  background: white;
+  padding: 4px;
+  border-radius: 4px !important;
+}
+
+.row-avatar {
+  background: var(--bg-elevated) !important;
+  border-radius: 8px !important;
+}
+
+.row-avatar img {
+  object-fit: contain !important;
+  background: white;
+  padding: 2px;
+  border-radius: 4px !important;
+}

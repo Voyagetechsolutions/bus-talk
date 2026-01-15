@@ -3,7 +3,8 @@ import { useMutation, useQuery } from 'convex/react';
 import { api } from '../convex/api';
 import type { Id } from '../convex/_generated/dataModel';
 import { getUserById } from '../utils/userCache';
-import '../styles/feed.css';
+import { getAnonymousId } from '../utils/anonymousId';
+import PostDetailModal from './PostDetailModal';
 
 interface MediaItem {
     url: string;
@@ -44,6 +45,10 @@ const FeedPost: React.FC<FeedPostProps> = ({ post, currentUserId, onCommentClick
     const [likesCount, setLikesCount] = useState(post.likes_count);
     const [userData, setUserData] = useState<UserData | null>(null);
     const [isFollowing, setIsFollowing] = useState(false);
+    const [showFullText, setShowFullText] = useState(false);
+    const [showImageModal, setShowImageModal] = useState(false);
+    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+    const [showPostDetail, setShowPostDetail] = useState(false);
 
     const likePost = useMutation(api.mutations.likePost as any);
     const toggleFollow = useMutation(api.mutations.toggleFollow as any);
@@ -74,11 +79,11 @@ const FeedPost: React.FC<FeedPostProps> = ({ post, currentUserId, onCommentClick
     }, [followingStatus]);
 
     const handleLike = async () => {
-        if (!currentUserId) return;
+        const likeUserId = currentUserId || getAnonymousId();
         try {
             const result = await likePost({
                 post_id: post._id,
-                user_id: currentUserId,
+                user_id: likeUserId,
             });
             setLiked(result.liked);
             setLikesCount(result.likes_count);
@@ -114,7 +119,86 @@ const FeedPost: React.FC<FeedPostProps> = ({ post, currentUserId, onCommentClick
     const profilePic = userData?.profile_pic;
     const isOwnPost = currentUserId === post.user_id;
     const hasMedia = post.media.length > 0;
-    const currentMedia = post.media[0];
+    const shouldTruncate = post.content.length > 200;
+    const displayText = shouldTruncate && !showFullText ? post.content.slice(0, 200) + '...' : post.content;
+
+    const renderMediaGrid = () => {
+        if (!hasMedia) return null;
+        const mediaCount = post.media.length;
+        
+        if (mediaCount === 1) {
+            const media = post.media[0];
+            return (
+                <div className="media-single" onClick={() => media.type === 'image' && setShowImageModal(true)}>
+                    {media.type === 'video' ? (
+                        <video src={media.url} controls playsInline preload="metadata" />
+                    ) : (
+                        <img src={media.url} alt={post.title} loading="lazy" />
+                    )}
+                </div>
+            );
+        }
+        
+        if (mediaCount === 2) {
+            return (
+                <div className="media-grid-2">
+                    {post.media.map((media, index) => (
+                        <div key={index} className="media-item" onClick={() => media.type === 'image' && (setSelectedImageIndex(index), setShowImageModal(true))}>
+                            {media.type === 'video' ? (
+                                <video src={media.url} controls playsInline preload="metadata" />
+                            ) : (
+                                <img src={media.url} alt={`${post.title} ${index + 1}`} loading="lazy" />
+                            )}
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+        
+        if (mediaCount === 3) {
+            return (
+                <div className="media-grid-3">
+                    <div className="media-item large" onClick={() => post.media[0].type === 'image' && setShowImageModal(true)}>
+                        {post.media[0].type === 'video' ? (
+                            <video src={post.media[0].url} controls playsInline preload="metadata" />
+                        ) : (
+                            <img src={post.media[0].url} alt={`${post.title} 1`} loading="lazy" />
+                        )}
+                    </div>
+                    <div className="media-column">
+                        {post.media.slice(1).map((media, index) => (
+                            <div key={index + 1} className="media-item" onClick={() => media.type === 'image' && (setSelectedImageIndex(index + 1), setShowImageModal(true))}>
+                                {media.type === 'video' ? (
+                                    <video src={media.url} controls playsInline preload="metadata" />
+                                ) : (
+                                    <img src={media.url} alt={`${post.title} ${index + 2}`} loading="lazy" />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+        
+        // 4+ images
+        return (
+            <div className="media-grid-4">
+                {post.media.slice(0, 3).map((media, index) => (
+                    <div key={index} className="media-item" onClick={() => media.type === 'image' && (setSelectedImageIndex(index), setShowImageModal(true))}>
+                        {media.type === 'video' ? (
+                            <video src={media.url} controls playsInline preload="metadata" />
+                        ) : (
+                            <img src={media.url} alt={`${post.title} ${index + 1}`} loading="lazy" />
+                        )}
+                    </div>
+                ))}
+                <div className="media-item overlay" onClick={() => (setSelectedImageIndex(3), setShowImageModal(true))}>
+                    <img src={post.media[3].url} alt={`${post.title} 4`} loading="lazy" />
+                    {mediaCount > 4 && <div className="media-overlay">+{mediaCount - 3}</div>}
+                </div>
+            </div>
+        );
+    };
 
     return (
         <article className={`post-card ${hasMedia ? 'has-media' : ''} ${featured ? 'featured' : ''}`}>
@@ -122,14 +206,7 @@ const FeedPost: React.FC<FeedPostProps> = ({ post, currentUserId, onCommentClick
                 {/* Media Section */}
                 {hasMedia && (
                     <div className="post-card-media">
-                        {currentMedia.type === 'video' ? (
-                            <video src={currentMedia.url} controls playsInline preload="metadata" />
-                        ) : (
-                            <img src={currentMedia.url} alt={post.title} loading="lazy" />
-                        )}
-                        {post.media.length > 1 && (
-                            <span className="post-media-count">+{post.media.length - 1}</span>
-                        )}
+                        {renderMediaGrid()}
                     </div>
                 )}
 
@@ -173,7 +250,17 @@ const FeedPost: React.FC<FeedPostProps> = ({ post, currentUserId, onCommentClick
 
                     {/* Excerpt */}
                     {post.content && (
-                        <p className="post-excerpt">{post.content}</p>
+                        <div className="post-excerpt">
+                            <p>{displayText}</p>
+                            {shouldTruncate && (
+                                <button 
+                                    className="read-more-btn" 
+                                    onClick={() => setShowFullText(!showFullText)}
+                                >
+                                    {showFullText ? 'Show less' : 'Read more'}
+                                </button>
+                            )}
+                        </div>
                     )}
 
                     {/* Actions */}
@@ -194,13 +281,45 @@ const FeedPost: React.FC<FeedPostProps> = ({ post, currentUserId, onCommentClick
                         </div>
                         {/* Read more only for news posts */}
                         {post.type === 'news' && (
-                            <button className="post-read-more" onClick={() => onCommentClick(post._id)}>
+                            <button className="post-read-more" onClick={() => setShowPostDetail(true)}>
                                 Read more →
                             </button>
                         )}
                     </div>
                 </div>
             </div>
+            
+            {/* Image Modal */}
+            {showImageModal && (
+                <div className="image-modal" onClick={() => setShowImageModal(false)}>
+                    <div className="image-modal-content" onClick={(e) => e.stopPropagation()}>
+                        <button className="modal-close" onClick={() => setShowImageModal(false)}>×</button>
+                        <img src={post.media[selectedImageIndex]?.url} alt={post.title} />
+                        {post.media.length > 1 && (
+                            <div className="modal-nav">
+                                <button 
+                                    className="nav-btn prev" 
+                                    onClick={() => setSelectedImageIndex(selectedImageIndex > 0 ? selectedImageIndex - 1 : post.media.length - 1)}
+                                >‹</button>
+                                <span className="nav-counter">{selectedImageIndex + 1} / {post.media.length}</span>
+                                <button 
+                                    className="nav-btn next" 
+                                    onClick={() => setSelectedImageIndex(selectedImageIndex < post.media.length - 1 ? selectedImageIndex + 1 : 0)}
+                                >›</button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+            {/* Post Detail Modal */}
+            <PostDetailModal
+                post={post}
+                isOpen={showPostDetail}
+                onClose={() => setShowPostDetail(false)}
+                username={username}
+                profilePic={profilePic}
+                isVerified={isVerified}
+            />
         </article>
     );
 };

@@ -12,7 +12,18 @@ if (!supabaseKey) {
   throw new Error('Missing REACT_APP_SUPABASE_ANON_KEY environment variable');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  },
+  global: {
+    headers: {
+      'x-client-info': 'bus-talk-app'
+    }
+  }
+});
 
 export const signUp = async (email: string, password: string, username: string) => {
   const { data, error } = await supabase.auth.signUp({
@@ -28,16 +39,26 @@ export const signUp = async (email: string, password: string, username: string) 
 };
 
 export const signIn = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({ 
-    email, 
-    password 
-  });
-  
-  if (error) {
-    console.error('Sign in error:', error);
+  try {
+    const { data, error } = await Promise.race([
+      supabase.auth.signInWithPassword({ email, password }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout')), 10000)
+      )
+    ]) as any;
+    
+    if (error) {
+      console.error('Sign in error:', error);
+    }
+    
+    return { data, error };
+  } catch (error) {
+    console.error('Sign in timeout or network error:', error);
+    return { 
+      data: null, 
+      error: { message: 'Connection timeout. Please check your internet connection.' }
+    };
   }
-  
-  return { data, error };
 };
 
 export const signOut = async () => {
@@ -46,7 +67,12 @@ export const signOut = async () => {
 
 export const getCurrentUser = async (): Promise<User | null> => {
   try {
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const { data: { user }, error } = await Promise.race([
+      supabase.auth.getUser(),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout')), 5000)
+      )
+    ]) as any;
     
     if (error || !user) {
       console.error('Auth error:', error);
@@ -66,7 +92,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
       
     return data;
   } catch (error) {
-    console.error('getCurrentUser error:', error);
+    console.error('getCurrentUser timeout or network error:', error);
     return null;
   }
 };

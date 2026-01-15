@@ -7,7 +7,7 @@ export const debugPosts = query({
         return posts.map(post => ({
             id: post._id,
             title: post.title,
-            mediaCount: post.media.length,
+            mediaCount: post.media?.length || 0,
             media: post.media,
         }));
     },

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes as RouterRoutes, Route, useLocation } from 'react-router-dom';
 import { useAppStore } from './hooks/useStore';
 import Navbar from './components/Navbar';
 import BusOfTheWeekModal from './components/BusOfTheWeekModal';
@@ -19,6 +19,9 @@ import Analytics from './pages/Analytics';
 import SpotBus from './pages/SpotBus';
 import CoachTalk from './pages/CoachTalk';
 import CommunityDetail from './pages/CommunityDetail';
+import RoutesPage from './pages/Routes';
+import './media-fix.css';
+import './company-fix.css';
 
 // Layout wrapper that conditionally shows navbar
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -54,7 +57,7 @@ function App() {
   return (
     <Router>
       <AppLayout>
-        <Routes>
+        <RouterRoutes>
           <Route path="/" element={<Home />} />
           <Route path="/companies" element={<Companies />} />
           <Route path="/buses" element={<Buses />} />
@@ -64,6 +67,7 @@ function App() {
           <Route path="/awards" element={<Awards />} />
           <Route path="/vote" element={<Vote />} />
           <Route path="/rate-trip" element={<RateTrip />} />
+          <Route path="/routes" element={<RoutesPage />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/admin/*" element={<Admin />} />
           <Route path="/spot-bus" element={<SpotBus />} />
@@ -71,7 +75,7 @@ function App() {
           <Route path="/coach-talk/:slug" element={<CommunityDetail />} />
           <Route path="/search" element={<Search />} />
           <Route path="/analytics" element={<Analytics />} />
-        </Routes>
+        </RouterRoutes>
       </AppLayout>
     </Router>
   );

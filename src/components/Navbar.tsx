@@ -144,6 +144,7 @@ const Navbar: React.FC = () => {
                   </svg>
                 </button>
                 <Dropdown isOpen={exploreOpen}>
+                  <DropdownItem to="/routes" icon="🗺️">Routes</DropdownItem>
                   <DropdownItem to="/companies" icon="🏢">Companies</DropdownItem>
                   <DropdownItem to="/buses" icon="🚌">Buses</DropdownItem>
                   <DropdownItem to="/drivers" icon="👨✈️">Drivers</DropdownItem>
@@ -352,6 +353,10 @@ const Navbar: React.FC = () => {
                 <Link to="/" onClick={closeAllDropdowns} className="flex items-center space-x-3 py-3 px-3 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors">
                   <span>🏠</span>
                   <span>Home</span>
+                </Link>
+                <Link to="/routes" onClick={closeAllDropdowns} className="flex items-center space-x-3 py-3 px-3 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                  <span>🗺️</span>
+                  <span>Routes</span>
                 </Link>
                 <Link to="/companies" onClick={closeAllDropdowns} className="flex items-center space-x-3 py-3 px-3 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors">
                   <span>🏢</span>

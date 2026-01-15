@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/api';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -13,7 +13,8 @@ interface Driver {
     company?: { name: string };
     routes?: string[];
     rating_avg?: number;
-    years_experience?: number;
+    experience_years?: number;
+    photo?: string;
 }
 
 interface Company {
@@ -28,13 +29,26 @@ const AdminDrivers: React.FC = () => {
         name: '',
         company_id: '',
         routes: '',
-        years_experience: ''
+        experience_years: ''
     });
+    const [photoFile, setPhotoFile] = useState<File | null>(null);
+    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const photoInputRef = useRef<HTMLInputElement>(null);
 
     const drivers = useQuery(api.queries.getDrivers) as Driver[] | undefined;
     const companies = useQuery(api.queries.getCompanies) as Company[] | undefined;
     const createDriver = useMutation(api.mutations.createDriver);
     const deleteDriver = useMutation(api.mutations.deleteDriver);
+    const generateUploadUrl = useMutation(api.storage.generateUploadUrl as any);
+
+    const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && file.type.startsWith('image/')) {
+            setPhotoFile(file);
+            setPhotoPreview(URL.createObjectURL(file));
+        }
+    };
 
     const handleOpenModal = (driver?: Driver) => {
         if (driver) {
@@ -43,29 +57,62 @@ const AdminDrivers: React.FC = () => {
                 name: driver.name,
                 company_id: driver.company_id || '',
                 routes: driver.routes?.join(', ') || '',
-                years_experience: driver.years_experience?.toString() || ''
+                experience_years: driver.experience_years?.toString() || ''
             });
+            setPhotoPreview(driver.photo || null);
+            setPhotoFile(null);
         } else {
             setEditingDriver(null);
-            setFormData({ name: '', company_id: '', routes: '', years_experience: '' });
+            setFormData({ name: '', company_id: '', routes: '', experience_years: '' });
+            setPhotoFile(null);
+            setPhotoPreview(null);
         }
         setIsModalOpen(true);
     };
 
+    const uploadPhoto = async (file: File): Promise<string | undefined> => {
+        try {
+            const uploadUrl = await generateUploadUrl();
+            const response = await fetch(uploadUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': file.type },
+                body: file,
+            });
+            if (!response.ok) {
+                console.error('Photo upload failed');
+                return undefined;
+            }
+            const { storageId } = await response.json();
+            return storageId;
+        } catch (error) {
+            console.error('Upload error:', error);
+            return undefined;
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setUploading(true);
         try {
+            let photoStorageId: string | undefined;
+            if (photoFile) {
+                photoStorageId = await uploadPhoto(photoFile);
+            }
             await createDriver({
                 name: formData.name,
                 company_id: formData.company_id || undefined,
                 routes: formData.routes.split(',').map(r => r.trim()).filter(Boolean),
-                years_experience: formData.years_experience ? parseInt(formData.years_experience) : undefined
+                experience_years: formData.experience_years ? parseInt(formData.experience_years) : 0,
+                photo: photoStorageId,
             });
             setIsModalOpen(false);
-            setFormData({ name: '', company_id: '', routes: '', years_experience: '' });
+            setFormData({ name: '', company_id: '', routes: '', experience_years: '' });
+            setPhotoFile(null);
+            setPhotoPreview(null);
         } catch (error) {
             console.error('Failed to create driver:', error);
         }
+        setUploading(false);
     };
 
     const handleDelete = async (driver: Driver) => {
@@ -79,6 +126,16 @@ const AdminDrivers: React.FC = () => {
     };
 
     const columns = [
+        {
+            key: 'photo',
+            label: 'Photo',
+            width: '60px',
+            render: (d: Driver) => (
+                <div className="table-logo">
+                    {d.photo ? <img src={d.photo} alt={d.name} /> : 'dY`"ƒ??ƒo^‹,?'}
+                </div>
+            )
+        },
         { key: 'name', label: 'Driver Name' },
         {
             key: 'company',
@@ -107,7 +164,7 @@ const AdminDrivers: React.FC = () => {
         {
             key: 'years_experience',
             label: 'Experience',
-            render: (d: Driver) => d.years_experience ? `${d.years_experience} yrs` : '-'
+            render: (d: Driver) => d.experience_years ? `${d.experience_years} yrs` : '-'
         }
     ];
 
@@ -154,8 +211,8 @@ const AdminDrivers: React.FC = () => {
                         <button className="btn-secondary" onClick={() => setIsModalOpen(false)}>
                             Cancel
                         </button>
-                        <button className="btn-primary" onClick={handleSubmit}>
-                            {editingDriver ? 'Update' : 'Create'}
+                        <button className="btn-primary" onClick={handleSubmit} disabled={uploading}>
+                            {uploading ? 'Uploading...' : editingDriver ? 'Update' : 'Create'}
                         </button>
                     </>
                 }
@@ -199,14 +256,82 @@ const AdminDrivers: React.FC = () => {
                         <label>Years of Experience</label>
                         <input
                             type="number"
-                            value={formData.years_experience}
-                            onChange={(e) => setFormData({ ...formData, years_experience: e.target.value })}
+                            value={formData.experience_years}
+                            onChange={(e) => setFormData({ ...formData, experience_years: e.target.value })}
                             placeholder="e.g., 5"
                             min="0"
                         />
                     </div>
+
+                    <div className="form-group">
+                        <label>Driver Photo</label>
+                        <input
+                            type="file"
+                            ref={photoInputRef}
+                            accept="image/*"
+                            onChange={handlePhotoSelect}
+                            className="hidden"
+                        />
+                        <div
+                            className="logo-upload-area"
+                            onClick={() => photoInputRef.current?.click()}
+                        >
+                            {photoPreview ? (
+                                <img src={photoPreview} alt="Driver preview" className="logo-preview" />
+                            ) : (
+                                <div className="logo-placeholder">
+                                    <span>dY"ú</span>
+                                    <p>Click to upload photo</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </form>
             </Modal>
+
+            <style>{`
+        .hidden {
+          display: none;
+        }
+        
+        .logo-upload-area {
+          width: 100%;
+          height: 120px;
+          border: 2px dashed #333;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+          overflow: hidden;
+        }
+        
+        .logo-upload-area:hover {
+          border-color: #f59e0b;
+          background: rgba(245, 158, 11, 0.05);
+        }
+        
+        .logo-preview {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: cover;
+        }
+        
+        .logo-placeholder {
+          text-align: center;
+          color: #666;
+        }
+        
+        .logo-placeholder span {
+          font-size: 32px;
+        }
+        
+        .logo-placeholder p {
+          margin-top: 8px;
+          font-size: 13px;
+        }
+      `}</style>
         </AdminLayout>
     );
 };

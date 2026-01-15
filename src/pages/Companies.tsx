@@ -1,9 +1,23 @@
 import React from 'react';
-import { useQuery } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '../convex/api';
+import { useAppStore } from '../hooks/useStore';
+import { getAnonymousId } from '../utils/anonymousId';
+import { getIsoWeek } from '../utils/date';
 
 const Companies: React.FC = () => {
+  const { user } = useAppStore();
   const companies = useQuery(api.queries.getCompanies as any);
+  const castVote = useMutation(api.mutations.castVote as any);
+  const voterId = user?.id || getAnonymousId();
+  const { week, year } = getIsoWeek(new Date());
+  const voteSummary = useQuery(api.queries.getVoteSummary as any, {
+    category: 'company_of_week',
+    year,
+    week,
+    user_id: voterId,
+  });
+  const userVote = voteSummary?.userVote ?? null;
   const loading = companies === undefined;
 
   if (loading) {
@@ -17,6 +31,19 @@ const Companies: React.FC = () => {
   const sortedCompanies = [...(companies || [])].sort((a, b) => (b.rating_avg || 0) - (a.rating_avg || 0));
   const featuredCompanies = sortedCompanies.slice(0, 3);
   const restCompanies = sortedCompanies.slice(3);
+
+  const handleNominate = async (companyId: string) => {
+    if (userVote) return;
+    await castVote({
+      user_id: voterId,
+      category: 'company_of_week',
+      nominee_id: companyId,
+      year,
+      week,
+      role: user?.role,
+      spotter_status: user?.spotter_status,
+    });
+  };
 
   return (
     <div className="editorial-page">
@@ -37,7 +64,11 @@ const Companies: React.FC = () => {
             <article key={company._id} className={`featured-card ${index === 0 ? 'featured-primary' : ''}`}>
               <div className="featured-rank">{index + 1}</div>
               <div className="featured-avatar">
-                {company.name[0]}
+                {company.logo ? (
+                  <img src={company.logo} alt={company.name} />
+                ) : (
+                  company.name[0]
+                )}
               </div>
               <h3 className="featured-name">{company.name}</h3>
               <div className="featured-stats">
@@ -46,6 +77,15 @@ const Companies: React.FC = () => {
                 <span>{company.buses_count || 0} buses</span>
                 <span className="divider">•</span>
                 <span>{company.routes_count || 0} routes</span>
+              </div>
+              <div className="bus-actions">
+                <button
+                  className={`action-link ${userVote ? 'opacity-60' : ''}`}
+                  onClick={() => handleNominate(company._id)}
+                  disabled={!!userVote}
+                >
+                  {userVote === company._id ? 'Nominated' : 'Nominate'}
+                </button>
               </div>
             </article>
           ))}
@@ -68,7 +108,13 @@ const Companies: React.FC = () => {
               <div key={company._id} className="table-row">
                 <span className="col-rank">{index + 4}</span>
                 <span className="col-name">
-                  <div className="row-avatar">{company.name[0]}</div>
+                  <div className="row-avatar">
+                    {company.logo ? (
+                      <img src={company.logo} alt={company.name} />
+                    ) : (
+                      company.name[0]
+                    )}
+                  </div>
                   <span className="row-title">{company.name}</span>
                 </span>
                 <span className="col-stat">{company.buses_count || 0}</span>

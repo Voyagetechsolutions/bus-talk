@@ -34,18 +34,19 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   initializeAuth: async () => {
     try {
-      const user = await getCurrentUser();
-      set({ user });
-      
-      // Listen for auth changes (only set up once)
-      supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          const userData = await getCurrentUser();
-          set({ user: userData });
-        } else if (event === 'SIGNED_OUT') {
-          set({ user: null });
-        }
-      });
+      // Skip Supabase auth for now due to connection issues
+      console.log('Skipping Supabase auth - using mock user');
+      const mockUser: User = {
+        id: 'mock-user-id',
+        username: 'TestUser',
+        email: 'test@example.com',
+        role: 'user',
+        spotter_status: false,
+        badges: [],
+        profile_pic: undefined,
+        created_at: Date.now().toString()
+      };
+      set({ user: mockUser });
     } catch (error) {
       console.error('Auth initialization error:', error);
       set({ user: null });

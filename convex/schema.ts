@@ -26,8 +26,9 @@ export default defineSchema({
     company_id: v.id("companies"),
     fleet_number: v.string(),
     route: v.string(),
-    type: v.string(),
+    type: v.optional(v.string()),
     year: v.optional(v.number()),
+    photos: v.optional(v.array(v.string())),
     rating_avg: v.number(),
     last_seen: v.optional(v.number()),
   }).index("by_company", ["company_id"]),
@@ -37,6 +38,7 @@ export default defineSchema({
     company_id: v.id("companies"),
     routes: v.array(v.string()),
     experience_years: v.number(),
+    photo: v.optional(v.string()),
     rating_avg: v.number(),
   }).index("by_company", ["company_id"]),
 
@@ -51,6 +53,7 @@ export default defineSchema({
       type: v.union(v.literal("image"), v.literal("video")),
       storage_id: v.optional(v.string()),
     }))),
+    status: v.optional(v.union(v.literal("active"), v.literal("blocked"))),
     likes_count: v.number(),
     boosts_count: v.number(),
     comments_count: v.number(),
@@ -136,6 +139,13 @@ export default defineSchema({
     .index("by_category_period", ["category", "year", "week"])
     .index("by_user_category_period", ["user_id", "category", "year", "week"]),
 
+  // Routes
+  routes: defineTable({
+    origin: v.string(),
+    destination: v.string(),
+    distance: v.optional(v.number()),
+  }),
+
   // Follows - follower relationships between users
   follows: defineTable({
     follower_id: v.string(),   // User doing the following (Supabase UUID)
@@ -194,6 +204,40 @@ export default defineSchema({
     .index("by_user", ["user_id"])
     .index("by_created", ["created_at"]),
 
+  // Community comments (Reddit-style)
+  community_comments: defineTable({
+    post_id: v.id("community_posts"),
+    user_id: v.string(),
+    parent_id: v.optional(v.id("community_comments")),
+    content: v.string(),
+    upvotes: v.number(),
+    downvotes: v.number(),
+    replies_count: v.number(),
+    created_at: v.number(),
+  })
+    .index("by_post", ["post_id"])
+    .index("by_parent", ["parent_id"])
+    .index("by_user", ["user_id"]),
+
+  // Community comment votes
+  community_comment_votes: defineTable({
+    comment_id: v.id("community_comments"),
+    user_id: v.string(),
+    vote_type: v.union(v.literal("upvote"), v.literal("downvote")),
+    created_at: v.number(),
+  })
+    .index("by_comment", ["comment_id"])
+    .index("by_user_comment", ["user_id", "comment_id"]),
+
+  // Community post votes
+  community_post_votes: defineTable({
+    post_id: v.id("community_posts"),
+    user_id: v.string(),
+    vote_type: v.union(v.literal("upvote"), v.literal("downvote")),
+    created_at: v.number(),
+  })
+    .index("by_post", ["post_id"])
+    .index("by_user_post", ["user_id", "post_id"]),
   // Community membership
   community_members: defineTable({
     community_id: v.id("communities"),

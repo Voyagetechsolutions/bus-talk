@@ -15,14 +15,16 @@ interface Post {
     likes_count: number;
     comments_count: number;
     created_at: number;
+    status: 'active' | 'blocked';
 }
 
 const AdminPosts: React.FC = () => {
     const [filter, setFilter] = useState<'all' | 'news' | 'sighting'>('all');
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-    const postsData = useQuery(api.queries.getPostsFeed as any, { limit: 100 });
+    const postsData = useQuery(api.queries.getAllPosts as any, { limit: 100 });
     const posts = (postsData?.posts || []) as Post[];
+    const setPostStatus = useMutation(api.mutations.setPostStatus);
 
     const filteredPosts = filter === 'all'
         ? posts
@@ -114,6 +116,18 @@ const AdminPosts: React.FC = () => {
                                                 title="View"
                                             >
                                                 👁️
+                                            </button>
+                                            <button
+                                                className="btn-icon block"
+                                                title={post.status === 'blocked' ? 'Unblock' : 'Block'}
+                                                onClick={async () => {
+                                                    await setPostStatus({
+                                                        post_id: post._id,
+                                                        status: post.status === 'blocked' ? 'active' : 'blocked',
+                                                    });
+                                                }}
+                                            >
+                                                {post.status === 'blocked' ? 'dY"2' : 'dY"'}
                                             </button>
                                             <button
                                                 className="btn-icon delete"
@@ -275,6 +289,14 @@ const AdminPosts: React.FC = () => {
         
         .btn-icon.view:hover {
           background: #3b82f6;
+        }
+        
+        .btn-icon.block {
+          background: #1f1f23;
+        }
+        
+        .btn-icon.block:hover {
+          background: #f59e0b;
         }
         
         .btn-icon.delete {

@@ -1090,6 +1090,13 @@
     margin-bottom: 1rem;
 }
 
+.featured-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
 .featured-name {
     font-weight: 600;
     font-size: 1.125rem;
@@ -1150,6 +1157,14 @@
     flex-shrink: 0;
 }
 
+.row-avatar img,
+.row-avatar-coral img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
 .row-avatar-coral {
     background: linear-gradient(135deg, var(--accent-coral), #be123c);
 }
@@ -1176,6 +1191,21 @@
     background: var(--bg-surface);
     border-radius: 0.5rem;
     padding: 1.25rem;
+}
+
+.bus-feature-image {
+    width: 100%;
+    height: 150px;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    background: var(--bg-elevated);
+}
+
+.bus-feature-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .bus-feature-header {
@@ -1261,6 +1291,13 @@
     font-size: 1.5rem;
     color: white;
     margin: 0 auto 1rem;
+}
+
+.driver-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
 }
 
 .driver-name {
@@ -2240,4 +2277,204 @@
     .dashboard-sections {
         grid-template-columns: 1fr;
     }
+}
+/* Media Grid Layouts */
+.media-single {
+  width: 100%;
+  cursor: pointer;
+}
+
+.media-single img,
+.media-single video {
+  width: 100%;
+  height: auto;
+  max-height: 350px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.media-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.media-grid-3 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 4px;
+  height: 300px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.media-grid-3 .media-column {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.media-grid-4 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 4px;
+  height: 300px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.media-item {
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.media-item img,
+.media-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.media-item.large {
+  grid-row: 1 / -1;
+}
+
+.media-item.overlay {
+  position: relative;
+}
+
+.media-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+/* Read More Button */
+.read-more-btn {
+  background: none;
+  border: none;
+  color: #f59e0b;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 8px;
+  padding: 0;
+}
+
+.read-more-btn:hover {
+  text-decoration: underline;
+}
+
+/* Image Modal */
+.image-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.image-modal-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.image-modal-content img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.modal-close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 32px;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-nav {
+  position: absolute;
+  bottom: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: white;
+}
+
+.nav-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.nav-counter {
+  font-size: 14px;
+  min-width: 60px;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .media-grid-3,
+  .media-grid-4 {
+    height: 250px;
+  }
+  
+  .modal-close {
+    top: -30px;
+    font-size: 24px;
+    width: 30px;
+    height: 30px;
+  }
+  
+  .modal-nav {
+    bottom: -40px;
+  }
+  
+  .nav-btn {
+    width: 35px;
+    height: 35px;
+    font-size: 18px;
+  }
 }

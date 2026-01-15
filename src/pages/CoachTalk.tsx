@@ -30,6 +30,14 @@ const CoachTalk: React.FC = () => {
     const createCommunity = useMutation(api.mutations.createCommunity as any);
     const joinCommunity = useMutation(api.mutations.joinCommunity as any);
     const leaveCommunity = useMutation(api.mutations.leaveCommunity as any);
+    const seedCommunities = useMutation(api.mutations.seedCommunities as any);
+
+    // Seed communities on first load if none exist
+    React.useEffect(() => {
+        if (communities && communities.length === 0) {
+            seedCommunities();
+        }
+    }, [communities, seedCommunities]);
 
     const handleCreate = async () => {
         if (!user?.id || !newCommunity.name) return;

@@ -133,6 +133,7 @@ export const seedDatabase = mutation({
                 title: post.title,
                 content: post.content,
                 media: [],
+                status: "active",
                 likes_count: Math.floor(10 + Math.random() * 50),
                 boosts_count: Math.floor(Math.random() * 10),
                 comments_count: Math.floor(Math.random() * 20),

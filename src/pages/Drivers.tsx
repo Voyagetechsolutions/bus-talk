@@ -1,9 +1,23 @@
 import React from 'react';
-import { useQuery } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '../convex/api';
+import { useAppStore } from '../hooks/useStore';
+import { getAnonymousId } from '../utils/anonymousId';
+import { getIsoWeek } from '../utils/date';
 
 const Drivers: React.FC = () => {
+  const { user } = useAppStore();
   const drivers = useQuery(api.queries.getDrivers as any);
+  const castVote = useMutation(api.mutations.castVote as any);
+  const voterId = user?.id || getAnonymousId();
+  const { week, year } = getIsoWeek(new Date());
+  const voteSummary = useQuery(api.queries.getVoteSummary as any, {
+    category: 'driver_of_week',
+    year,
+    week,
+    user_id: voterId,
+  });
+  const userVote = voteSummary?.userVote ?? null;
   const loading = drivers === undefined;
 
   if (loading) {
@@ -17,6 +31,19 @@ const Drivers: React.FC = () => {
   const sortedDrivers = [...(drivers || [])].sort((a, b) => (b.rating_avg || 0) - (a.rating_avg || 0));
   const featuredDrivers = sortedDrivers.slice(0, 3);
   const restDrivers = sortedDrivers.slice(3);
+
+  const handleNominate = async (driverId: string) => {
+    if (userVote) return;
+    await castVote({
+      user_id: voterId,
+      category: 'driver_of_week',
+      nominee_id: driverId,
+      year,
+      week,
+      role: user?.role,
+      spotter_status: user?.spotter_status,
+    });
+  };
 
   return (
     <div className="editorial-page">
@@ -36,7 +63,13 @@ const Drivers: React.FC = () => {
           {featuredDrivers.map((driver, index) => (
             <article key={driver._id} className="driver-card">
               <div className="driver-rank">{index + 1}</div>
-              <div className="driver-avatar">{driver.name[0]}</div>
+              <div className="driver-avatar">
+                {driver.photo ? (
+                  <img src={driver.photo} alt={driver.name} />
+                ) : (
+                  driver.name[0]
+                )}
+              </div>
               <h3 className="driver-name">{driver.name}</h3>
               <p className="driver-company">{driver.company?.name}</p>
               <div className="driver-stats">
@@ -51,6 +84,13 @@ const Drivers: React.FC = () => {
                   <span className="route-more">+{driver.routes.length - 2}</span>
                 )}
               </div>
+              <button
+                className={`action-link ${userVote ? 'opacity-60' : ''}`}
+                onClick={() => handleNominate(driver._id)}
+                disabled={!!userVote}
+              >
+                {userVote === driver._id ? 'Nominated' : 'Nominate'}
+              </button>
               <button className="rate-btn">Rate Driver</button>
             </article>
           ))}
@@ -73,7 +113,13 @@ const Drivers: React.FC = () => {
               <div key={driver._id} className="table-row">
                 <span className="col-rank">{index + 4}</span>
                 <span className="col-name">
-                  <div className="row-avatar-coral">{driver.name[0]}</div>
+                  <div className="row-avatar-coral">
+                    {driver.photo ? (
+                      <img src={driver.photo} alt={driver.name} />
+                    ) : (
+                      driver.name[0]
+                    )}
+                  </div>
                   <span className="row-title">{driver.name}</span>
                 </span>
                 <span className="col-stat">{driver.company?.name}</span>

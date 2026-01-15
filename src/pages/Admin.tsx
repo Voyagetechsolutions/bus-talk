@@ -8,6 +8,7 @@ import AdminCompanies from './admin/AdminCompanies';
 import AdminDrivers from './admin/AdminDrivers';
 import AdminBuses from './admin/AdminBuses';
 import AdminPosts from './admin/AdminPosts';
+import AdminRoutes from './admin/AdminRoutes';
 
 const AdminDashboard: React.FC = () => {
   const [seeding, setSeeding] = useState(false);
@@ -109,6 +110,7 @@ const Admin: React.FC = () => {
       <Route path="drivers" element={<AdminDrivers />} />
       <Route path="buses" element={<AdminBuses />} />
       <Route path="posts" element={<AdminPosts />} />
+      <Route path="routes" element={<AdminRoutes />} />
     </Routes>
   );
 };

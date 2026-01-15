@@ -27,6 +27,7 @@ export interface Bus {
   year?: number;
   rating_avg: number;
   last_seen?: string;
+  photos?: string[];
   company?: Partial<Company>;
 }
 
@@ -37,6 +38,7 @@ export interface Driver {
   routes: string[];
   experience_years: number;
   rating_avg: number;
+  photo?: string;
   company?: Company;
 }
 

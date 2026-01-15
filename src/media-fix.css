@@ -1,0 +1,27 @@
+/* Media Layout Height Fixes */
+.post-card-media {
+  margin-bottom: 16px;
+}
+
+.media-single {
+  max-height: 350px;
+  overflow: hidden;
+}
+
+.media-grid-2 {
+  height: 250px;
+}
+
+.media-grid-3 {
+  height: 250px;
+}
+
+.media-grid-4 {
+  height: 250px;
+}
+
+.media-single img,
+.media-single video {
+  height: 100%;
+  max-height: 350px;
+}

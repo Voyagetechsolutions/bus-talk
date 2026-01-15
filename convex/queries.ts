@@ -19,6 +19,21 @@ async function resolveMediaUrls(ctx: any, media: any[]) {
   );
 }
 
+async function resolveStorageUrl(ctx: any, storageId?: string | null) {
+  if (!storageId) return storageId;
+  try {
+    const url = await ctx.storage.getUrl(storageId);
+    return url || storageId;
+  } catch {
+    return storageId;
+  }
+}
+
+async function resolveStorageUrls(ctx: any, storageIds?: string[]) {
+  if (!storageIds || storageIds.length === 0) return [];
+  return Promise.all(storageIds.map((id) => resolveStorageUrl(ctx, id)));
+}
+
 // Get paginated feed posts (for infinite scroll)
 export const getPostsFeed = query({
   args: {
@@ -31,7 +46,8 @@ export const getPostsFeed = query({
     let postsQuery = ctx.db
       .query("posts")
       .withIndex("by_created")
-      .order("desc");
+      .order("desc")
+      .filter((q) => q.eq(q.field("status"), "active"));
 
     if (args.cursor) {
       postsQuery = postsQuery.filter((q) =>
@@ -46,7 +62,7 @@ export const getPostsFeed = query({
     // Resolve storage URLs for all media
     const enrichedPosts = await Promise.all(
       feedPosts.map(async (post) => {
-        const resolvedMedia = await resolveMediaUrls(ctx, post.media);
+        const resolvedMedia = await resolveMediaUrls(ctx, post.media ?? []);
         return { ...post, media: resolvedMedia };
       })
     );
@@ -64,11 +80,34 @@ export const getPost = query({
   args: { postId: v.id("posts") },
   handler: async (ctx, args) => {
     const post = await ctx.db.get(args.postId);
-    if (!post) return null;
+    if (!post || (post.status && post.status === "blocked")) return null;
 
     // Resolve storage URLs for media
-    const resolvedMedia = await resolveMediaUrls(ctx, post.media);
+    const resolvedMedia = await resolveMediaUrls(ctx, post.media ?? []);
     return { ...post, media: resolvedMedia };
+  },
+});
+
+// Get posts for admin moderation (includes blocked)
+export const getAllPosts = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const posts = await ctx.db
+      .query("posts")
+      .withIndex("by_created")
+      .order("desc")
+      .take(args.limit ?? 100);
+
+    const enrichedPosts = await Promise.all(
+      posts.map(async (post) => {
+        const resolvedMedia = await resolveMediaUrls(ctx, post.media ?? []);
+        return { ...post, media: resolvedMedia };
+      })
+    );
+
+    return { posts: enrichedPosts };
   },
 });
 
@@ -161,7 +200,8 @@ export const getBuses = query({
     const enriched = await Promise.all(
       buses.map(async (bus) => {
         const company = await ctx.db.get(bus.company_id);
-        return { ...bus, company };
+        const photos = await resolveStorageUrls(ctx, bus.photos);
+        return { ...bus, company, photos };
       })
     );
 
@@ -172,7 +212,13 @@ export const getBuses = query({
 // Get companies
 export const getCompanies = query({
   handler: async (ctx) => {
-    return await ctx.db.query("companies").order("desc").collect();
+    const companies = await ctx.db.query("companies").order("desc").collect();
+    return await Promise.all(
+      companies.map(async (company) => {
+        const logo = await resolveStorageUrl(ctx, company.logo);
+        return { ...company, logo };
+      })
+    );
   },
 });
 
@@ -184,7 +230,8 @@ export const getDrivers = query({
     const enriched = await Promise.all(
       drivers.map(async (driver) => {
         const company = await ctx.db.get(driver.company_id);
-        return { ...driver, company };
+        const photo = await resolveStorageUrl(ctx, driver.photo);
+        return { ...driver, company, photo };
       })
     );
 
@@ -215,7 +262,8 @@ export const getTopBuses = query({
     const enriched = await Promise.all(
       buses.map(async (bus) => {
         const company = await ctx.db.get(bus.company_id);
-        return { ...bus, company };
+        const photos = await resolveStorageUrls(ctx, bus.photos);
+        return { ...bus, company, photos };
       })
     );
 
@@ -345,9 +393,16 @@ export const getUserCommunityMemberships = query({
   },
 });
 
+// Get routes
+export const getRoutes = query({
+  handler: async (ctx) => {
+    return await ctx.db.query("routes").collect();
+  },
+});
+
 // ============== VOTING QUERIES ==============
 
-export const getBusVoteSummary = query({
+export const getVoteSummary = query({
   args: {
     category: v.string(),
     year: v.number(),
@@ -386,5 +441,79 @@ export const getBusVoteSummary = query({
     }
 
     return { votesByNominee, userVote };
+  },
+});
+
+export const getTopNominees = query({
+  args: {
+    category: v.string(),
+    year: v.number(),
+    week: v.number(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 5;
+    const votes = await ctx.db
+      .query("votes")
+      .withIndex("by_category_period", (q) =>
+        q.eq("category", args.category).eq("year", args.year).eq("week", args.week)
+      )
+      .collect();
+
+    const counts: Record<string, number> = {};
+    votes.forEach((vote) => {
+      counts[vote.nominee_id] = (counts[vote.nominee_id] || 0) + 1;
+    });
+
+    const sortedIds = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([id]) => id);
+
+    if (args.category === "bus_of_week") {
+      const buses = await Promise.all(
+        sortedIds.map(async (id) => {
+          try {
+            const bus = await ctx.db.get(id as any);
+            if (!bus || !('company_id' in bus)) return null;
+            const company = await ctx.db.get((bus as any).company_id);
+            const photos = await resolveStorageUrls(ctx, (bus as any).photos);
+            return { ...bus, company, photos, votes: counts[id] || 0 };
+          } catch { return null; }
+        })
+      );
+      return buses.filter(Boolean);
+    }
+
+    if (args.category === "company_of_week") {
+      const companies = await Promise.all(
+        sortedIds.map(async (id) => {
+          try {
+            const company = await ctx.db.get(id as any);
+            if (!company || !('logo' in company)) return null;
+            const logo = await resolveStorageUrl(ctx, (company as any).logo);
+            return { ...company, logo, votes: counts[id] || 0 };
+          } catch { return null; }
+        })
+      );
+      return companies.filter(Boolean);
+    }
+
+    if (args.category === "driver_of_week") {
+      const drivers = await Promise.all(
+        sortedIds.map(async (id) => {
+          try {
+            const driver = await ctx.db.get(id as any);
+            if (!driver || !('company_id' in driver) || !('routes' in driver)) return null;
+            const company = await ctx.db.get((driver as any).company_id);
+            const photo = await resolveStorageUrl(ctx, (driver as any).photo);
+            return { ...driver, company, photo, votes: counts[id] || 0 };
+          } catch { return null; }
+        })
+      );
+      return drivers.filter(Boolean);
+    }
+
+    return [];
   },
 });

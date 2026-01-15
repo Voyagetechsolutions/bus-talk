@@ -17,6 +17,7 @@ export const createPost = mutation({
   handler: async (ctx, args) => {
     return await ctx.db.insert("posts", {
       ...args,
+      status: "active",
       likes_count: 0,
       boosts_count: 0,
       comments_count: 0,
@@ -257,8 +258,9 @@ export const createBus = mutation({
     company_id: v.id("companies"),
     fleet_number: v.string(),
     route: v.string(),
-    type: v.string(),
+    type: v.optional(v.string()),
     year: v.optional(v.number()),
+    photos: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const busId = await ctx.db.insert("buses", {
@@ -275,6 +277,35 @@ export const createBus = mutation({
     }
 
     return busId;
+  },
+});
+
+// Create driver
+export const createDriver = mutation({
+  args: {
+    name: v.string(),
+    company_id: v.id("companies"),
+    routes: v.array(v.string()),
+    experience_years: v.number(),
+    photo: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("drivers", {
+      ...args,
+      rating_avg: 0,
+    });
+  },
+});
+
+// Moderate a post (block/unblock)
+export const setPostStatus = mutation({
+  args: {
+    post_id: v.id("posts"),
+    status: v.union(v.literal("active"), v.literal("blocked")),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.post_id, { status: args.status });
+    return { success: true };
   },
 });
 
@@ -372,6 +403,27 @@ export const deleteDriver = mutation({
 // Delete bus
 export const deleteBus = mutation({
   args: { id: v.id("buses") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id);
+    return { success: true };
+  },
+});
+
+// Create route
+export const createRoute = mutation({
+  args: {
+    origin: v.string(),
+    destination: v.string(),
+    distance: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("routes", args);
+  },
+});
+
+// Delete route
+export const deleteRoute = mutation({
+  args: { id: v.id("routes") },
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
     return { success: true };
@@ -672,5 +724,219 @@ export const leaveCommunity = mutation({
     }
 
     return { not_member: true };
+  },
+});
+// Create a comment on a community post
+export const createCommunityComment = mutation({
+  args: {
+    post_id: v.id("community_posts"),
+    user_id: v.string(),
+    content: v.string(),
+    parent_id: v.optional(v.id("community_comments")),
+  },
+  handler: async (ctx, args) => {
+    const commentId = await ctx.db.insert("community_comments", {
+      post_id: args.post_id,
+      user_id: args.user_id,
+      content: args.content,
+      parent_id: args.parent_id,
+      upvotes: 0,
+      downvotes: 0,
+      replies_count: 0,
+      created_at: Date.now(),
+    });
+
+    // Update post comment count
+    const post = await ctx.db.get(args.post_id);
+    if (post) {
+      await ctx.db.patch(args.post_id, {
+        comments_count: post.comments_count + 1,
+      });
+    }
+
+    // If this is a reply, update parent's reply count
+    if (args.parent_id) {
+      const parent = await ctx.db.get(args.parent_id);
+      if (parent) {
+        await ctx.db.patch(args.parent_id, {
+          replies_count: parent.replies_count + 1,
+        });
+      }
+    }
+
+    return commentId;
+  },
+});
+
+// Vote on a community comment (upvote/downvote)
+export const voteCommunityComment = mutation({
+  args: {
+    comment_id: v.id("community_comments"),
+    user_id: v.string(),
+    vote_type: v.union(v.literal("upvote"), v.literal("downvote")),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("community_comment_votes")
+      .withIndex("by_user_comment", (q) =>
+        q.eq("user_id", args.user_id).eq("comment_id", args.comment_id)
+      )
+      .first();
+
+    const comment = await ctx.db.get(args.comment_id);
+    if (!comment) throw new Error("Comment not found");
+
+    if (existing) {
+      // Remove existing vote
+      await ctx.db.delete(existing._id);
+      
+      if (existing.vote_type === "upvote") {
+        await ctx.db.patch(args.comment_id, {
+          upvotes: Math.max(0, comment.upvotes - 1),
+        });
+      } else {
+        await ctx.db.patch(args.comment_id, {
+          downvotes: Math.max(0, comment.downvotes - 1),
+        });
+      }
+
+      // If same vote type, just remove it
+      if (existing.vote_type === args.vote_type) {
+        return { vote_type: null };
+      }
+    }
+
+    // Add new vote
+    await ctx.db.insert("community_comment_votes", {
+      comment_id: args.comment_id,
+      user_id: args.user_id,
+      vote_type: args.vote_type,
+      created_at: Date.now(),
+    });
+
+    if (args.vote_type === "upvote") {
+      await ctx.db.patch(args.comment_id, {
+        upvotes: comment.upvotes + 1,
+      });
+    } else {
+      await ctx.db.patch(args.comment_id, {
+        downvotes: comment.downvotes + 1,
+      });
+    }
+
+    return { vote_type: args.vote_type };
+  },
+});
+
+// Vote on a community post (upvote/downvote)
+export const voteCommunityPost = mutation({
+  args: {
+    post_id: v.id("community_posts"),
+    user_id: v.string(),
+    vote_type: v.union(v.literal("upvote"), v.literal("downvote")),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("community_post_votes")
+      .withIndex("by_user_post", (q) =>
+        q.eq("user_id", args.user_id).eq("post_id", args.post_id)
+      )
+      .first();
+
+    const post = await ctx.db.get(args.post_id);
+    if (!post) throw new Error("Post not found");
+
+    if (existing) {
+      // Remove existing vote
+      await ctx.db.delete(existing._id);
+      
+      if (existing.vote_type === "upvote") {
+        await ctx.db.patch(args.post_id, {
+          upvotes: Math.max(0, post.upvotes - 1),
+        });
+      } else {
+        await ctx.db.patch(args.post_id, {
+          downvotes: Math.max(0, post.downvotes - 1),
+        });
+      }
+
+      // If same vote type, just remove it
+      if (existing.vote_type === args.vote_type) {
+        return { vote_type: null };
+      }
+    }
+
+    // Add new vote
+    await ctx.db.insert("community_post_votes", {
+      post_id: args.post_id,
+      user_id: args.user_id,
+      vote_type: args.vote_type,
+      created_at: Date.now(),
+    });
+
+    if (args.vote_type === "upvote") {
+      await ctx.db.patch(args.post_id, {
+        upvotes: post.upvotes + 1,
+      });
+    } else {
+      await ctx.db.patch(args.post_id, {
+        downvotes: post.downvotes + 1,
+      });
+    }
+
+    return { vote_type: args.vote_type };
+  },
+});
+// Seed communities for testing
+export const seedCommunities = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const communities = [
+      {
+        name: "Golden Arrow Bus Services",
+        slug: "golden-arrow",
+        description: "Discuss GABS routes, schedules, and experiences",
+        icon: "🚌",
+        created_by: "mock-user-id",
+      },
+      {
+        name: "MyCiTi Fans",
+        slug: "myciti-fans", 
+        description: "Cape Town's BRT system discussions",
+        icon: "🔵",
+        created_by: "mock-user-id",
+      },
+      {
+        name: "Bus Photography",
+        slug: "bus-photography",
+        description: "Share your best bus photos and spotting tips",
+        icon: "📷",
+        created_by: "mock-user-id",
+      }
+    ];
+
+    for (const community of communities) {
+      const existing = await ctx.db
+        .query("communities")
+        .withIndex("by_slug", (q) => q.eq("slug", community.slug))
+        .first();
+      
+      if (!existing) {
+        const communityId = await ctx.db.insert("communities", {
+          ...community,
+          members_count: 1,
+          posts_count: 0,
+          created_at: Date.now(),
+        });
+
+        await ctx.db.insert("community_members", {
+          community_id: communityId,
+          user_id: community.created_by,
+          joined_at: Date.now(),
+        });
+      }
+    }
+
+    return { success: true };
   },
 });

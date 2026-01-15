@@ -1,9 +1,25 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../convex/api';
+import { useAppStore } from '../hooks/useStore';
+import { getAnonymousId } from '../utils/anonymousId';
+import { getIsoWeek } from '../utils/date';
 
 const Buses: React.FC = () => {
+  const { user } = useAppStore();
+  const navigate = useNavigate();
   const buses = useQuery(api.queries.getBuses as any, { limit: 50 });
+  const castVote = useMutation(api.mutations.castVote as any);
+  const voterId = user?.id || getAnonymousId();
+  const { week, year } = getIsoWeek(new Date());
+  const voteSummary = useQuery(api.queries.getVoteSummary as any, {
+    category: 'bus_of_week',
+    year,
+    week,
+    user_id: voterId,
+  });
+  const userVote = voteSummary?.userVote ?? null;
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('rating');
   const loading = buses === undefined;
@@ -26,6 +42,19 @@ const Buses: React.FC = () => {
 
   const featuredBuses = filteredBuses.slice(0, 4);
   const restBuses = filteredBuses.slice(4);
+
+  const handleNominate = async (busId: string) => {
+    if (userVote) return;
+    await castVote({
+      user_id: voterId,
+      category: 'bus_of_week',
+      nominee_id: busId,
+      year,
+      week,
+      role: user?.role,
+      spotter_status: user?.spotter_status,
+    });
+  };
 
   if (loading) {
     return (
@@ -74,6 +103,11 @@ const Buses: React.FC = () => {
         <div className="bus-feature-grid">
           {featuredBuses.map((bus, index) => (
             <article key={bus._id} className="bus-feature-card">
+              {bus.photos?.[0] && (
+                <div className="bus-feature-image">
+                  <img src={bus.photos[0]} alt={bus.fleet_number} />
+                </div>
+              )}
               <div className="bus-feature-header">
                 <span className="bus-rank">{index + 1}</span>
                 <span className="bus-rating">⭐ {bus.rating_avg?.toFixed(1) || '0.0'}</span>
@@ -82,7 +116,16 @@ const Buses: React.FC = () => {
               <p className="bus-company">{bus.company?.name}</p>
               <p className="bus-route">{bus.route}</p>
               <div className="bus-actions">
-                <span className="action-link">Rate this bus →</span>
+                <button
+                  className={`action-link ${userVote ? 'opacity-60' : ''}`}
+                  onClick={() => handleNominate(bus._id)}
+                  disabled={!!userVote}
+                >
+                  {userVote === bus._id ? 'Nominated' : 'Nominate'}
+                </button>
+                <button className="action-link" onClick={() => navigate('/rate-trip', { state: { busId: bus._id } })}>
+                  Rate this bus →
+                </button>
               </div>
             </article>
           ))}
