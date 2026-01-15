@@ -26,6 +26,7 @@ const AdvancedSearch: React.FC = () => {
     } else {
       setResults([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, filters]);
 
   const performSearch = async () => {

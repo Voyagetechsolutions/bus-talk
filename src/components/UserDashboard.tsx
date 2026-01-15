@@ -25,6 +25,7 @@ const UserDashboard: React.FC = () => {
     if (user) {
       fetchUserStats();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const fetchUserStats = async () => {

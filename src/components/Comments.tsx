@@ -31,6 +31,7 @@ const Comments: React.FC<CommentsProps> = ({ postId }) => {
     return () => {
       supabase.removeChannel(subscription);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId]);
 
   const fetchComments = async () => {

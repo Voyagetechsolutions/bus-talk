@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { api } from '../convex/api';
@@ -17,7 +17,7 @@ const Home: React.FC = () => {
 
   const feedData = useQuery(api.queries.getPostsFeed as any, { limit: 20 });
   const loading = feedData === undefined;
-  const posts = feedData?.posts || [];
+  const posts = useMemo(() => feedData?.posts || [], [feedData?.posts]);
   const currentUserId = user?.id;
 
   const { week, year } = getIsoWeek(new Date());
