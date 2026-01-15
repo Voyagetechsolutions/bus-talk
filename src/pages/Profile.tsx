@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery } from 'convex/react';
 import { api } from '../convex/api';
 import { useAppStore } from '../hooks/useStore';
 import { BADGES } from '../utils/badges';
@@ -21,15 +21,8 @@ const Profile: React.FC = () => {
   const [activeView, setActiveView] = useState('dashboard');
   const [stats, setStats] = useState<UserStats>({ postsCount: 0, ratingsCount: 0, boostsCount: 0, rank: 0 });
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (user && posts) {
-      calculateStats();
-    }
-  }, [user, posts]);
-
-  const calculateStats = () => {
+  const calculateStats = useCallback(() => {
     if (!user || !posts?.posts) return;
 
     const userPosts = posts.posts.filter((p: any) => p.user_id === user.id);
@@ -52,7 +45,13 @@ const Profile: React.FC = () => {
     }));
 
     setRecentActivity(activity);
-  };
+  }, [user, posts]);
+
+  useEffect(() => {
+    if (user && posts) {
+      calculateStats();
+    }
+  }, [user, posts, calculateStats]);
 
   const [authModal, setAuthModal] = useState({ isOpen: false, mode: 'signin' as 'signin' | 'signup' });
 
@@ -155,16 +154,7 @@ const Profile: React.FC = () => {
             </div>
 
             {/* Stats */}
-            {loading ? (
-              <div className="animate-pulse">
-                <div className="grid md:grid-cols-4 gap-4">
-                  {[1,2,3,4].map(i => (
-                    <div key={i} className="h-20 bg-gray-700 rounded-lg"></div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-4 gap-4">
+            <div className="grid md:grid-cols-4 gap-4">
                 <div className="text-center p-4 bg-gray-700 rounded-lg">
                   <h3 className="text-lg font-bold text-accent-yellow">Posts</h3>
                   <p className="text-2xl font-bold">{stats.postsCount}</p>
@@ -185,8 +175,7 @@ const Profile: React.FC = () => {
                   <p className="text-sm font-bold">{user.created_at ? new Date(parseInt(user.created_at)).toLocaleDateString() : 'Invalid Date'}</p>
                   <p className="text-xs text-gray-400">Join Date</p>
                 </div>
-              </div>
-            )}
+            </div>
           </div>
 
           {/* Recent Activity */}

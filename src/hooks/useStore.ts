@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { User, Post, Bus, Driver, Company } from '../types';
-import { supabase, getCurrentUser } from '../utils/supabase';
 
 interface AppState {
   user: User | null;

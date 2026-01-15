@@ -143,7 +143,12 @@ const FeedPost: React.FC<FeedPostProps> = ({ post, currentUserId, onCommentClick
             return (
                 <div className="media-grid-2">
                     {post.media.map((media, index) => (
-                        <div key={index} className="media-item" onClick={() => media.type === 'image' && (setSelectedImageIndex(index), setShowImageModal(true))}>
+                        <div key={index} className="media-item" onClick={() => {
+                            if (media.type === 'image') {
+                                setSelectedImageIndex(index);
+                                setShowImageModal(true);
+                            }
+                        }}>
                             {media.type === 'video' ? (
                                 <video src={media.url} controls playsInline preload="metadata" />
                             ) : (
@@ -167,7 +172,12 @@ const FeedPost: React.FC<FeedPostProps> = ({ post, currentUserId, onCommentClick
                     </div>
                     <div className="media-column">
                         {post.media.slice(1).map((media, index) => (
-                            <div key={index + 1} className="media-item" onClick={() => media.type === 'image' && (setSelectedImageIndex(index + 1), setShowImageModal(true))}>
+                            <div key={index + 1} className="media-item" onClick={() => {
+                                if (media.type === 'image') {
+                                    setSelectedImageIndex(index + 1);
+                                    setShowImageModal(true);
+                                }
+                            }}>
                                 {media.type === 'video' ? (
                                     <video src={media.url} controls playsInline preload="metadata" />
                                 ) : (
@@ -184,7 +194,12 @@ const FeedPost: React.FC<FeedPostProps> = ({ post, currentUserId, onCommentClick
         return (
             <div className="media-grid-4">
                 {post.media.slice(0, 3).map((media, index) => (
-                    <div key={index} className="media-item" onClick={() => media.type === 'image' && (setSelectedImageIndex(index), setShowImageModal(true))}>
+                    <div key={index} className="media-item" onClick={() => {
+                        if (media.type === 'image') {
+                            setSelectedImageIndex(index);
+                            setShowImageModal(true);
+                        }
+                    }}>
                         {media.type === 'video' ? (
                             <video src={media.url} controls playsInline preload="metadata" />
                         ) : (
@@ -192,7 +207,10 @@ const FeedPost: React.FC<FeedPostProps> = ({ post, currentUserId, onCommentClick
                         )}
                     </div>
                 ))}
-                <div className="media-item overlay" onClick={() => (setSelectedImageIndex(3), setShowImageModal(true))}>
+                <div className="media-item overlay" onClick={() => {
+                    setSelectedImageIndex(3);
+                    setShowImageModal(true);
+                }}>
                     <img src={post.media[3].url} alt={`${post.title} 4`} loading="lazy" />
                     {mediaCount > 4 && <div className="media-overlay">+{mediaCount - 3}</div>}
                 </div>

@@ -5,18 +5,6 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '../convex/api';
 import { useAppStore } from '../hooks/useStore';
 
-interface Company {
-  id: string;
-  name: string;
-  logo?: string;
-}
-
-interface Bus {
-  id: string;
-  fleet_number: string;
-  route: string;
-}
-
 const RateTrip: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();

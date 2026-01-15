@@ -34,7 +34,6 @@ const Companies: React.FC = () => {
 
   const sortedCompanies = [...(companies || [])].sort((a, b) => (b.rating_avg || 0) - (a.rating_avg || 0));
   const featuredCompanies = sortedCompanies.slice(0, 3);
-  const restCompanies = sortedCompanies.slice(3);
 
   const handleNominate = async (companyId: string) => {
     if (userVote) return;
