@@ -46,11 +46,11 @@ export default defineSchema({
     type: v.union(v.literal("news"), v.literal("sighting")),
     title: v.string(),
     content: v.string(),
-    media: v.array(v.object({
+    media: v.optional(v.array(v.object({
       url: v.string(),
       type: v.union(v.literal("image"), v.literal("video")),
       storage_id: v.optional(v.string()),
-    })),
+    }))),
     likes_count: v.number(),
     boosts_count: v.number(),
     comments_count: v.number(),
@@ -127,9 +127,14 @@ export default defineSchema({
     user_id: v.string(),
     category: v.string(),
     nominee_id: v.string(),
-    month: v.number(),
     year: v.number(),
-  }).index("by_user", ["user_id"]),
+    week: v.number(),
+    weight: v.number(),
+    created_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_category_period", ["category", "year", "week"])
+    .index("by_user_category_period", ["user_id", "category", "year", "week"]),
 
   // Follows - follower relationships between users
   follows: defineTable({
@@ -175,6 +180,11 @@ export default defineSchema({
     user_id: v.string(),
     title: v.string(),
     content: v.string(),
+    media: v.optional(v.array(v.object({
+      url: v.string(),
+      type: v.union(v.literal("image"), v.literal("video")),
+      storage_id: v.optional(v.string()),
+    }))),
     upvotes: v.number(),
     downvotes: v.number(),
     comments_count: v.number(),

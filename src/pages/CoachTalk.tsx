@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../convex/api';
 import { useAppStore } from '../hooks/useStore';
 import type { Id } from '../convex/_generated/dataModel';
@@ -17,19 +18,25 @@ interface Community {
 
 const CoachTalk: React.FC = () => {
     const { user } = useAppStore();
+    const navigate = useNavigate();
     const [showCreate, setShowCreate] = useState(false);
     const [newCommunity, setNewCommunity] = useState({ name: '', description: '' });
 
     const communities = useQuery(api.queries.getCommunities as any) as Community[] | undefined;
+    const memberships = useQuery(
+        api.queries.getUserCommunityMemberships as any,
+        user?.id ? { user_id: user.id } : "skip"
+    ) as Id<"communities">[] | undefined;
     const createCommunity = useMutation(api.mutations.createCommunity as any);
     const joinCommunity = useMutation(api.mutations.joinCommunity as any);
+    const leaveCommunity = useMutation(api.mutations.leaveCommunity as any);
 
     const handleCreate = async () => {
         if (!user?.id || !newCommunity.name) return;
 
         const slug = newCommunity.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
-        await createCommunity({
+        const result = await createCommunity({
             name: newCommunity.name,
             slug,
             description: newCommunity.description,
@@ -39,11 +46,20 @@ const CoachTalk: React.FC = () => {
 
         setNewCommunity({ name: '', description: '' });
         setShowCreate(false);
+
+        if (result?.slug) {
+            navigate(`/coach-talk/${result.slug}`);
+        }
     };
 
     const handleJoin = async (communityId: Id<"communities">) => {
         if (!user?.id) return;
         await joinCommunity({ community_id: communityId, user_id: user.id });
+    };
+
+    const handleLeave = async (communityId: Id<"communities">) => {
+        if (!user?.id) return;
+        await leaveCommunity({ community_id: communityId, user_id: user.id });
     };
 
     const defaultCommunities = [
@@ -100,13 +116,25 @@ const CoachTalk: React.FC = () => {
                     {/* Show from database if available */}
                     {communities && communities.map((c) => (
                         <div key={c._id} className="community-card">
-                            <div className="community-icon">{c.icon || '💬'}</div>
+                            <Link to={`/coach-talk/${c.slug}`} className="community-icon">
+                                {c.icon || '💬'}
+                            </Link>
                             <div className="community-info">
-                                <h3>{c.name}</h3>
+                                <Link to={`/coach-talk/${c.slug}`} className="community-link">
+                                    <h3>{c.name}</h3>
+                                </Link>
                                 <p>{c.description}</p>
                                 <span className="members">{c.members_count} members • {c.posts_count} posts</span>
                             </div>
-                            <button className="join-btn" onClick={() => handleJoin(c._id)}>Join</button>
+                            {user ? (
+                                memberships?.includes(c._id) ? (
+                                    <button className="join-btn joined" onClick={() => handleLeave(c._id)}>Joined</button>
+                                ) : (
+                                    <button className="join-btn" onClick={() => handleJoin(c._id)}>Join</button>
+                                )
+                            ) : (
+                                <Link to={`/coach-talk/${c.slug}`} className="join-btn view-btn">View</Link>
+                            )}
                         </div>
                     ))}
 
@@ -210,6 +238,13 @@ const CoachTalk: React.FC = () => {
           justify-content: center;
           font-size: 24px;
           flex-shrink: 0;
+          text-decoration: none;
+          color: inherit;
+        }
+
+        .community-link {
+          text-decoration: none;
+          color: inherit;
         }
 
         .community-info {
@@ -247,6 +282,18 @@ const CoachTalk: React.FC = () => {
           cursor: pointer;
           transition: all 0.2s;
           flex-shrink: 0;
+        }
+
+        .join-btn.joined {
+          background: #f59e0b;
+          color: #000;
+        }
+
+        .join-btn.view-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          text-decoration: none;
         }
 
         .join-btn:hover {

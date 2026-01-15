@@ -306,7 +306,13 @@ export const getCommunityPosts = query({
       .withIndex("by_community", (q) => q.eq("community_id", args.community_id))
       .order("desc")
       .take(limit);
-    return posts;
+    const enriched = await Promise.all(
+      posts.map(async (post) => {
+        const resolvedMedia = await resolveMediaUrls(ctx, post.media ?? []);
+        return { ...post, media: resolvedMedia };
+      })
+    );
+    return enriched;
   },
 });
 
@@ -324,5 +330,61 @@ export const isCommunityMember = query({
       )
       .first();
     return !!membership;
+  },
+});
+
+// Get community memberships for a user
+export const getUserCommunityMemberships = query({
+  args: { user_id: v.string() },
+  handler: async (ctx, args) => {
+    const memberships = await ctx.db
+      .query("community_members")
+      .withIndex("by_user", (q) => q.eq("user_id", args.user_id))
+      .collect();
+    return memberships.map((membership) => membership.community_id);
+  },
+});
+
+// ============== VOTING QUERIES ==============
+
+export const getBusVoteSummary = query({
+  args: {
+    category: v.string(),
+    year: v.number(),
+    week: v.number(),
+    user_id: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const votes = await ctx.db
+      .query("votes")
+      .withIndex("by_category_period", (q) =>
+        q.eq("category", args.category).eq("year", args.year).eq("week", args.week)
+      )
+      .collect();
+
+    const votesByNominee: Record<string, { total: number; weighted: number }> = {};
+    for (const vote of votes) {
+      if (!votesByNominee[vote.nominee_id]) {
+        votesByNominee[vote.nominee_id] = { total: 0, weighted: 0 };
+      }
+      votesByNominee[vote.nominee_id].total += 1;
+      votesByNominee[vote.nominee_id].weighted += vote.weight;
+    }
+
+    let userVote: string | null = null;
+    if (args.user_id) {
+      const existing = await ctx.db
+        .query("votes")
+        .withIndex("by_user_category_period", (q) =>
+          q.eq("user_id", args.user_id!)
+            .eq("category", args.category)
+            .eq("year", args.year)
+            .eq("week", args.week)
+        )
+        .first();
+      userVote = existing?.nominee_id ?? null;
+    }
+
+    return { votesByNominee, userVote };
   },
 });

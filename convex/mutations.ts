@@ -479,9 +479,21 @@ export const createCommunity = mutation({
     created_by: v.string(),
   },
   handler: async (ctx, args) => {
+    let slug = args.slug;
+    let suffix = 1;
+    while (
+      await ctx.db
+        .query("communities")
+        .withIndex("by_slug", (q) => q.eq("slug", slug))
+        .first()
+    ) {
+      slug = `${args.slug}-${suffix}`;
+      suffix += 1;
+    }
+
     const communityId = await ctx.db.insert("communities", {
       name: args.name,
-      slug: args.slug,
+      slug,
       description: args.description,
       icon: args.icon,
       members_count: 1,
@@ -497,7 +509,7 @@ export const createCommunity = mutation({
       joined_at: Date.now(),
     });
 
-    return { community_id: communityId };
+    return { community_id: communityId, slug };
   },
 });
 
@@ -508,13 +520,30 @@ export const createCommunityPost = mutation({
     user_id: v.string(),
     title: v.string(),
     content: v.string(),
+    media: v.optional(v.array(v.object({
+      url: v.string(),
+      type: v.union(v.literal("image"), v.literal("video")),
+      storage_id: v.optional(v.string()),
+    }))),
   },
   handler: async (ctx, args) => {
+    const membership = await ctx.db
+      .query("community_members")
+      .withIndex("by_pair", (q) =>
+        q.eq("community_id", args.community_id).eq("user_id", args.user_id)
+      )
+      .first();
+
+    if (!membership) {
+      throw new Error("Must join community before posting");
+    }
+
     const postId = await ctx.db.insert("community_posts", {
       community_id: args.community_id,
       user_id: args.user_id,
       title: args.title,
       content: args.content,
+      media: args.media ?? [],
       upvotes: 0,
       downvotes: 0,
       comments_count: 0,
@@ -530,6 +559,53 @@ export const createCommunityPost = mutation({
     }
 
     return { post_id: postId };
+  },
+});
+
+// Cast a vote for bus of the week
+export const castVote = mutation({
+  args: {
+    user_id: v.string(),
+    category: v.string(),
+    nominee_id: v.string(),
+    year: v.number(),
+    week: v.number(),
+    role: v.optional(v.union(v.literal("admin"), v.literal("verified_spotter"), v.literal("user"))),
+    spotter_status: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("votes")
+      .withIndex("by_user_category_period", (q) =>
+        q.eq("user_id", args.user_id)
+          .eq("category", args.category)
+          .eq("year", args.year)
+          .eq("week", args.week)
+      )
+      .first();
+
+    if (existing) {
+      return { alreadyVoted: true, nominee_id: existing.nominee_id };
+    }
+
+    const weight =
+      args.role === "admin"
+        ? 3
+        : args.role === "verified_spotter" || args.spotter_status
+          ? 2
+          : 1;
+
+    await ctx.db.insert("votes", {
+      user_id: args.user_id,
+      category: args.category,
+      nominee_id: args.nominee_id,
+      year: args.year,
+      week: args.week,
+      weight,
+      created_at: Date.now(),
+    });
+
+    return { success: true };
   },
 });
 

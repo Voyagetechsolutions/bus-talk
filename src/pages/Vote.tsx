@@ -1,23 +1,35 @@
-import React, { useState } from 'react';
-import { useQuery } from 'convex/react';
+import React from 'react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '../convex/api';
 import { useAppStore } from '../hooks/useStore';
+import { getIsoWeek, getNextSaturdayLabel } from '../utils/date';
 
 const Vote: React.FC = () => {
   const { user } = useAppStore();
   const buses = useQuery(api.queries.getTopBuses as any, { limit: 5 });
-  const [votedBusId, setVotedBusId] = useState<string | null>(null);
-  const [votes, setVotes] = useState<Record<string, number>>({});
+  const castVote = useMutation(api.mutations.castVote as any);
+  const { week, year } = getIsoWeek(new Date());
+  const voteSummary = useQuery(api.queries.getBusVoteSummary as any, {
+    category: 'bus_of_week',
+    year,
+    week,
+    user_id: user?.id,
+  });
+  const userVote = voteSummary?.userVote ?? null;
 
   const loading = buses === undefined;
 
-  const handleVote = (busId: string) => {
-    if (!user || votedBusId) return;
-    setVotedBusId(busId);
-    setVotes(prev => ({
-      ...prev,
-      [busId]: (prev[busId] || Math.floor(Math.random() * 50)) + 1
-    }));
+  const handleVote = async (busId: string) => {
+    if (!user || userVote) return;
+    await castVote({
+      user_id: user.id,
+      category: 'bus_of_week',
+      nominee_id: busId,
+      year,
+      week,
+      role: user.role,
+      spotter_status: user.spotter_status,
+    });
   };
 
   if (loading) {
@@ -28,13 +40,19 @@ const Vote: React.FC = () => {
     );
   }
 
-  const busesWithVotes = buses?.map((bus: any) => ({
-    ...bus,
-    votes: votes[bus._id] || Math.floor(Math.random() * 50),
-    hasVoted: bus._id === votedBusId,
-  })) || [];
+  const votesByNominee = voteSummary?.votesByNominee ?? {};
+  const busesWithVotes = buses?.map((bus: any) => {
+    const voteData = votesByNominee[bus._id] || { total: 0, weighted: 0 };
+    return {
+      ...bus,
+      votes: voteData.total,
+      weightedVotes: voteData.weighted,
+      hasVoted: bus._id === userVote,
+    };
+  }) || [];
 
-  const maxVotes = Math.max(...busesWithVotes.map((b: any) => b.votes), 1);
+  const maxVotes = Math.max(...busesWithVotes.map((b: any) => b.weightedVotes), 1);
+  const closingLabel = getNextSaturdayLabel(new Date());
 
   return (
     <div className="editorial-page">
@@ -46,7 +64,7 @@ const Vote: React.FC = () => {
           </div>
           <div className="vote-timer">
             <span className="timer-label">Voting closes in</span>
-            <span className="timer-value">2 days</span>
+            <span className="timer-value">{closingLabel}</span>
           </div>
         </div>
       </header>
@@ -54,7 +72,7 @@ const Vote: React.FC = () => {
       {/* Nominees */}
       <section className="vote-nominees">
         {busesWithVotes.map((bus, index) => {
-          const percentage = (bus.votes / maxVotes) * 100;
+          const percentage = (bus.weightedVotes / maxVotes) * 100;
 
           return (
             <article key={bus._id} className="nominee-card">
@@ -76,7 +94,9 @@ const Vote: React.FC = () => {
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
-                  <span className="vote-count">{bus.votes} votes</span>
+                  <span className="vote-count">
+                    {bus.votes} votes • {bus.weightedVotes} weighted
+                  </span>
                 </div>
               </div>
 
@@ -86,8 +106,8 @@ const Vote: React.FC = () => {
                 ) : (
                   <button
                     onClick={() => handleVote(bus._id)}
-                    disabled={!user || !!votedBusId}
-                    className={`vote-btn ${!user || votedBusId ? 'disabled' : ''}`}
+                    disabled={!user || !!userVote}
+                    className={`vote-btn ${!user || userVote ? 'disabled' : ''}`}
                   >
                     Vote
                   </button>
