@@ -127,7 +127,7 @@ const AdminPosts: React.FC = () => {
                                                     });
                                                 }}
                                             >
-                                                {post.status === 'blocked' ? 'dY"2' : 'dY"'}
+                                                {post.status === 'blocked' ? '✅' : '🚫'}
                                             </button>
                                             <button
                                                 className="btn-icon delete"

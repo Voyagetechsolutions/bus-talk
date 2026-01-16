@@ -181,9 +181,10 @@ const RateTrip: React.FC = () => {
             {[1, 2, 3, 4, 5].map(star => (
               <button
                 key={star}
+                type="button"
                 onClick={() => setOverallRating(star)}
-                className={`text-4xl transition-colors ${
-                  star <= overallRating ? 'text-accent-yellow' : 'text-gray-600'
+                className={`text-4xl transition-all cursor-pointer hover:scale-110 ${
+                  star <= overallRating ? 'text-accent-yellow' : 'text-gray-600 hover:text-gray-500'
                 }`}
               >
                 ⭐

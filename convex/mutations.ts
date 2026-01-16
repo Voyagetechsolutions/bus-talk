@@ -990,3 +990,64 @@ export const rateCompany = mutation({
     return { success: true, new_average: avgRating };
   },
 });
+
+// Update company
+export const updateCompany = mutation({
+  args: {
+    id: v.id("companies"),
+    name: v.string(),
+    logo: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { id, ...data } = args;
+    await ctx.db.patch(id, data);
+    return { success: true };
+  },
+});
+
+// Update bus
+export const updateBus = mutation({
+  args: {
+    id: v.id("buses"),
+    company_id: v.optional(v.id("companies")),
+    fleet_number: v.optional(v.string()),
+    route: v.optional(v.string()),
+    type: v.optional(v.string()),
+    year: v.optional(v.number()),
+    photos: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const { id, ...data } = args;
+    const updates: any = {};
+    Object.keys(data).forEach(key => {
+      if (data[key as keyof typeof data] !== undefined) {
+        updates[key] = data[key as keyof typeof data];
+      }
+    });
+    await ctx.db.patch(id, updates);
+    return { success: true };
+  },
+});
+
+// Update driver
+export const updateDriver = mutation({
+  args: {
+    id: v.id("drivers"),
+    name: v.optional(v.string()),
+    company_id: v.optional(v.id("companies")),
+    routes: v.optional(v.array(v.string())),
+    experience_years: v.optional(v.number()),
+    photo: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { id, ...data } = args;
+    const updates: any = {};
+    Object.keys(data).forEach(key => {
+      if (data[key as keyof typeof data] !== undefined) {
+        updates[key] = data[key as keyof typeof data];
+      }
+    });
+    await ctx.db.patch(id, updates);
+    return { success: true };
+  },
+});

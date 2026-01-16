@@ -39,6 +39,7 @@ const AdminDrivers: React.FC = () => {
     const drivers = useQuery(api.queries.getDrivers) as Driver[] | undefined;
     const companies = useQuery(api.queries.getCompanies) as Company[] | undefined;
     const createDriver = useMutation(api.mutations.createDriver);
+    const updateDriver = useMutation(api.mutations.updateDriver);
     const deleteDriver = useMutation(api.mutations.deleteDriver);
     const generateUploadUrl = useMutation(api.storage.generateUploadUrl as any);
 
@@ -98,19 +99,32 @@ const AdminDrivers: React.FC = () => {
             if (photoFile) {
                 photoStorageId = await uploadPhoto(photoFile);
             }
-            await createDriver({
-                name: formData.name,
-                company_id: formData.company_id || undefined,
-                routes: formData.routes.split(',').map(r => r.trim()).filter(Boolean),
-                experience_years: formData.experience_years ? parseInt(formData.experience_years) : 0,
-                photo: photoStorageId,
-            });
+
+            if (editingDriver) {
+                await updateDriver({
+                    id: editingDriver._id as any,
+                    name: formData.name,
+                    company_id: formData.company_id ? formData.company_id as any : undefined,
+                    routes: formData.routes.split(',').map(r => r.trim()).filter(Boolean),
+                    experience_years: formData.experience_years ? parseInt(formData.experience_years) : undefined,
+                    photo: photoStorageId || editingDriver.photo,
+                });
+            } else {
+                await createDriver({
+                    name: formData.name,
+                    company_id: formData.company_id as any,
+                    routes: formData.routes.split(',').map(r => r.trim()).filter(Boolean),
+                    experience_years: formData.experience_years ? parseInt(formData.experience_years) : 0,
+                    photo: photoStorageId,
+                });
+            }
+
             setIsModalOpen(false);
             setFormData({ name: '', company_id: '', routes: '', experience_years: '' });
             setPhotoFile(null);
             setPhotoPreview(null);
         } catch (error) {
-            console.error('Failed to create driver:', error);
+            console.error('Failed to save driver:', error);
         }
         setUploading(false);
     };

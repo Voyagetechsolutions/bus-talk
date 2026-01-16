@@ -61,14 +61,12 @@ const Companies: React.FC = () => {
   };
 
   const handleRateCompany = async () => {
-    if (!user) {
-      alert('Please sign in to rate companies');
-      return;
-    }
     if (!ratingModal.company || rating === 0) return;
     
+    const userId = user?.id || getAnonymousId();
+    
     await rateCompany({
-      user_id: user.id,
+      user_id: userId,
       company_id: ratingModal.company._id,
       rating,
       comment: comment.trim() || undefined,

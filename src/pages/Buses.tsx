@@ -22,6 +22,7 @@ const Buses: React.FC = () => {
   const userVote = voteSummary?.userVote ?? null;
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('rating');
+  const [selectedBus, setSelectedBus] = useState<any>(null);
   const loading = buses === undefined;
 
   const filteredBuses = useMemo(() => {
@@ -40,8 +41,7 @@ const Buses: React.FC = () => {
     });
   }, [buses, searchTerm, sortBy]);
 
-  const featuredBuses = filteredBuses.slice(0, 4);
-  const restBuses = filteredBuses.slice(4);
+  const featuredBuses = filteredBuses.slice(0, 3);
 
   const handleNominate = async (busId: string) => {
     if (userVote) return;
@@ -97,24 +97,27 @@ const Buses: React.FC = () => {
         </select>
       </div>
 
-      {/* Featured Grid */}
+      {/* Featured */}
       <section className="featured-section">
         <h2 className="section-label">Top Rated</h2>
-        <div className="bus-feature-grid">
+        <div className="featured-grid-3">
           {featuredBuses.map((bus, index) => (
-            <article key={bus._id} className="bus-feature-card">
-              {bus.photos?.[0] && (
-                <div className="bus-feature-image">
+            <article key={bus._id} className={`featured-card ${index === 0 ? 'featured-primary' : ''}`}>
+              <div className="featured-rank">{index + 1}</div>
+              <div className="featured-avatar">
+                {bus.photos?.[0] ? (
                   <img src={bus.photos[0]} alt={bus.fleet_number} />
-                </div>
-              )}
-              <div className="bus-feature-header">
-                <span className="bus-rank">{index + 1}</span>
-                <span className="bus-rating">⭐ {bus.rating_avg?.toFixed(1) || '0.0'}</span>
+                ) : (
+                  bus.fleet_number.slice(0, 2)
+                )}
               </div>
-              <h3 className="bus-fleet">{bus.fleet_number}</h3>
-              <p className="bus-company">{bus.company?.name}</p>
-              <p className="bus-route">{bus.route}</p>
+              <h3 className="featured-name">{bus.fleet_number}</h3>
+              <div className="featured-stats">
+                <span className="rating">⭐ {bus.rating_avg?.toFixed(1) || '0.0'}</span>
+                <span className="divider">•</span>
+                <span>{bus.company?.name}</span>
+              </div>
+              <p className="featured-subtitle">{bus.route}</p>
               <div className="bus-actions">
                 <button
                   className={`action-link ${userVote ? 'opacity-60' : ''}`}
@@ -123,44 +126,102 @@ const Buses: React.FC = () => {
                 >
                   {userVote === bus._id ? 'Nominated' : 'Nominate'}
                 </button>
-                <button className="action-link" onClick={() => navigate('/rate-trip', { state: { busId: bus._id } })}>
-                  Rate this bus →
-                </button>
               </div>
             </article>
           ))}
         </div>
       </section>
 
-      {/* All Buses Table */}
-      {restBuses.length > 0 && (
-        <section className="list-section">
-          <h2 className="section-label">All Buses</h2>
-          <div className="data-table">
-            <div className="table-header">
-              <span>#</span>
-              <span>Bus</span>
-              <span>Company</span>
-              <span>Route</span>
-              <span>Rating</span>
-            </div>
-            {restBuses.map((bus, index) => (
-              <div key={bus._id} className="table-row">
-                <span className="col-rank">{index + 5}</span>
-                <span className="col-name">
-                  <div className="row-avatar">{bus.fleet_number.slice(0, 2)}</div>
-                  <div>
-                    <span className="row-title">{bus.fleet_number}</span>
-                    <span className="row-subtitle">{bus.type || 'Standard'}</span>
-                  </div>
-                </span>
-                <span className="col-stat">{bus.company?.name}</span>
-                <span className="col-stat">{bus.route}</span>
-                <span className="col-stat highlight">⭐ {bus.rating_avg?.toFixed(1) || '0.0'}</span>
+      {/* All Buses Grid */}
+      <section className="list-section">
+        <h2 className="section-label">All Buses</h2>
+        <div className="companies-grid">
+          {filteredBuses?.map((bus) => (
+            <div key={bus._id} className="company-card" onClick={() => setSelectedBus(bus)} style={{ cursor: 'pointer' }}>
+              <div className="company-logo">
+                {bus.photos?.[0] ? (
+                  <img src={bus.photos[0]} alt={bus.fleet_number} />
+                ) : (
+                  <span>{bus.fleet_number.slice(0, 2)}</span>
+                )}
               </div>
-            ))}
+              <div className="company-info">
+                <h3 className="company-name">{bus.fleet_number}</h3>
+                <div className="company-stats">
+                  <span className="rating">⭐ {bus.rating_avg?.toFixed(1) || '0.0'}</span>
+                  <span>{bus.company?.name}</span>
+                  <span>{bus.route}</span>
+                </div>
+              </div>
+              <div className="company-actions">
+                <button
+                  className={`action-btn nominate ${userVote ? 'disabled' : ''}`}
+                  onClick={(e) => { e.stopPropagation(); handleNominate(bus._id); }}
+                  disabled={!!userVote}
+                >
+                  {userVote === bus._id ? 'Nominated' : 'Nominate'}
+                </button>
+                <button
+                  className="action-btn rate"
+                  onClick={(e) => { e.stopPropagation(); navigate('/rate-trip', { state: { busId: bus._id } }); }}
+                >
+                  Rate Bus
+                </button>
+              </div>
+            </div>
+          )) || []}
+        </div>
+      </section>
+
+      {/* Bus Detail Modal */}
+      {selectedBus && (
+        <div className="modal-overlay" onClick={() => setSelectedBus(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h3>{selectedBus.fleet_number}</h3>
+              <button className="modal-close" onClick={() => setSelectedBus(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              {selectedBus.photos?.[0] && (
+                <img src={selectedBus.photos[0]} alt={selectedBus.fleet_number} style={{ width: '100%', borderRadius: '8px', marginBottom: '16px' }} />
+              )}
+              <div style={{ display: 'grid', gap: '12px' }}>
+                <div>
+                  <strong>Company:</strong> {selectedBus.company?.name}
+                </div>
+                <div>
+                  <strong>Route:</strong> {selectedBus.route}
+                </div>
+                {selectedBus.type && (
+                  <div>
+                    <strong>Type:</strong> {selectedBus.type}
+                  </div>
+                )}
+                {selectedBus.year && (
+                  <div>
+                    <strong>Year:</strong> {selectedBus.year}
+                  </div>
+                )}
+                <div>
+                  <strong>Rating:</strong> ⭐ {selectedBus.rating_avg?.toFixed(1) || '0.0'}
+                </div>
+                {selectedBus.last_seen && (
+                  <div>
+                    <strong>Last Seen:</strong> {new Date(selectedBus.last_seen).toLocaleDateString()}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="btn-submit" 
+                onClick={() => { setSelectedBus(null); navigate('/rate-trip', { state: { busId: selectedBus._id } }); }}
+              >
+                Rate This Bus
+              </button>
+            </div>
           </div>
-        </section>
+        </div>
       )}
     </div>
   );

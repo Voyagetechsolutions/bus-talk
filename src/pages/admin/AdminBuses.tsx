@@ -51,6 +51,7 @@ const AdminBuses: React.FC = () => {
     const buses = useQuery(api.queries.getBuses, { limit: 100 }) as Bus[] | undefined;
     const companies = useQuery(api.queries.getCompanies) as Company[] | undefined;
     const createBus = useMutation(api.mutations.createBus);
+    const updateBus = useMutation(api.mutations.updateBus);
     const deleteBus = useMutation(api.mutations.deleteBus);
     const generateUploadUrl = useMutation(api.storage.generateUploadUrl as any);
 
@@ -123,20 +124,39 @@ const AdminBuses: React.FC = () => {
                 const storageId = await uploadPhoto(file);
                 if (storageId) uploadedPhotos.push(storageId);
             }
-            await createBus({
-                fleet_number: formData.fleet_number,
-                company_id: formData.company_id || undefined,
-                route: formData.route,
-                type: formData.type || undefined,
-                year: formData.year ? parseInt(formData.year) : undefined,
-                photos: uploadedPhotos.length > 0 ? uploadedPhotos : undefined,
-            });
+
+            if (editingBus) {
+                await updateBus({
+                    id: editingBus._id as any,
+                    fleet_number: formData.fleet_number,
+                    company_id: formData.company_id ? formData.company_id as any : undefined,
+                    route: formData.route,
+                    type: formData.type || undefined,
+                    year: formData.year ? parseInt(formData.year) : undefined,
+                    photos: uploadedPhotos.length > 0 ? uploadedPhotos : editingBus.photos,
+                });
+            } else {
+                if (!formData.company_id) {
+                    alert('Please select a company');
+                    setUploading(false);
+                    return;
+                }
+                await createBus({
+                    fleet_number: formData.fleet_number,
+                    company_id: formData.company_id as any,
+                    route: formData.route,
+                    type: formData.type || undefined,
+                    year: formData.year ? parseInt(formData.year) : undefined,
+                    photos: uploadedPhotos.length > 0 ? uploadedPhotos : undefined,
+                });
+            }
+
             setIsModalOpen(false);
             setFormData({ fleet_number: '', company_id: '', route: '', type: '', year: '' });
             setPhotoFiles([]);
             setPhotoPreviews([]);
         } catch (error) {
-            console.error('Failed to create bus:', error);
+            console.error('Failed to save bus:', error);
         }
         setUploading(false);
     };

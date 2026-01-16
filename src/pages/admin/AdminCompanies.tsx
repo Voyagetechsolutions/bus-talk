@@ -26,6 +26,7 @@ const AdminCompanies: React.FC = () => {
 
     const companies = useQuery(api.queries.getCompanies) as Company[] | undefined;
     const createCompany = useMutation(api.mutations.createCompany);
+    const updateCompany = useMutation(api.mutations.updateCompany);
     const deleteCompany = useMutation(api.mutations.deleteCompany);
     const generateUploadUrl = useMutation(api.storage.generateUploadUrl as any);
 
@@ -84,22 +85,29 @@ const AdminCompanies: React.FC = () => {
         try {
             let logoStorageId: string | undefined;
 
-            // Upload logo if selected
             if (logoFile) {
                 logoStorageId = await uploadLogo(logoFile);
             }
 
-            await createCompany({
-                name: formData.name,
-                logo: logoStorageId,
-            });
+            if (editingCompany) {
+                await updateCompany({
+                    id: editingCompany._id as any,
+                    name: formData.name,
+                    logo: logoStorageId || editingCompany.logo,
+                });
+            } else {
+                await createCompany({
+                    name: formData.name,
+                    logo: logoStorageId,
+                });
+            }
 
             setIsModalOpen(false);
             setFormData({ name: '', routes: '' });
             setLogoFile(null);
             setLogoPreview(null);
         } catch (error) {
-            console.error('Failed to create company:', error);
+            console.error('Failed to save company:', error);
         }
         setUploading(false);
     };
